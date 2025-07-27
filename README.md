@@ -28,7 +28,7 @@ If you find what you belive is a defect in the code, please report it!
 
 ### On Binder
 
-You can use the `e-ORP` tool interactively on Binder using this link
+You can use the `e-ORP` tool interactively on Binder using [this link](https://mybinder.org/v2/gh/dcurrie/e-ORP/HEAD?urlpath=%2Fdoc%2Ftree%2Fe-ORP.ipynb)
 
 ### On your local device
 
