@@ -1,4 +1,11 @@
 # e-ORP
+
+<picture>
+ <source media="(prefers-color-scheme: dark)" srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/e-orp-dark-logo-240.png">
+ <source media="(prefers-color-scheme: light)" srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/e-orp-light-logo-240.png">
+ <img alt="e-ORP" src="[e-ORP](https://github.com/dcurrie/e-ORP/blob/main/doc/e-orp-light-logo-240.png)">
+</picture>
+
 Optimal Retirement Planner
 
 Inspired by the now unmaintained (and unavailable?) `i-ORP` by James Welch, this
@@ -29,6 +36,8 @@ If you find what you belive is a defect in the code, please report it!
 ### On Binder
 
 You can use the `e-ORP` tool interactively on Binder using [this link](https://mybinder.org/v2/gh/dcurrie/e-ORP/HEAD?urlpath=%2Fdoc%2Ftree%2Fe-ORP.ipynb)
+
+Just click the ▶ run button
 
 ### On your local device
 
