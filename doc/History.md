@@ -93,10 +93,10 @@ For the non-linear programming solver I turned to [PySCIPopt](https://pyscipopt.
 The transition was easy, and it handles the capital gains calculation... usually. 
 See [my issue](https://github.com/scipopt/PySCIPOpt/issues/1039)... still pending.
 
-### e-ORP
+### e-ORP.ipynb
 
 I used Binder to serve up the notebook. To do this I needed a public repo, so I renamed
-oorpynlp.ipynb to e-ORP.ipnb and created the new (this) repo.
+oorpynlp.ipynb to e-ORP.ipnb and created this new repo.
  
 
 ## Credits
