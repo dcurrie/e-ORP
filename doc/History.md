@@ -92,11 +92,14 @@ otherwise works well. The I sought out a non-linear solver.
 For the non-linear programming solver I turned to [PySCIPopt](https://pyscipopt.readthedocs.io/en/latest/index.html).
 The transition was easy, and it handles the capital gains calculation... usually. 
 See [my issue](https://github.com/scipopt/PySCIPOpt/issues/1039)... still pending.
+So, I made the non-linear constraints in the NLP solver optional with a UI button, 
+and added an "opinionated" alternative: use up to a configurable fraction of the 
+afterTax account basis each year. The makes a nice interactive "what-if" tool.
 
 ### e-ORP.ipynb
 
 I used Binder to serve up the notebook. To do this I needed a public repo, so I renamed
-oorpynlp.ipynb to e-ORP.ipnb and created this new repo.
+oorpynlp.ipynb to e-ORP.ipynb and created this new repo.
  
 
 ## Credits
