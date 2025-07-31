@@ -27,9 +27,12 @@ If you find what you believe is a defect in the code, please report it!
 ## Known Limitations and Quirks
 
 - [ ] The `i-ORP` IRMAA feature is not implemented
-- [ ] `e-ORP` assumes the OBBBA extra tax deduction of $6000 applies to anyone over 65 between the years 2025 through 2028, and does not phase out the deduction for AGIs above $150,000 (joint, $75,000 single)
 - [ ] The `i-ORP` investing glide path is not implemented
 - [ ] There are undoubtedly several other missing `i-ORP` features, but none that I ever used!
+
+## Features
+
+- [x] `e-ORP` calculates the OBBBA extra retirement tax deduction ($6000 over 65 between the years 2025 through 2028), and does the phase out for MAGIs above $150,000 (joint, $75,000 single)
 
 ## Basic Usage Instructions
 
