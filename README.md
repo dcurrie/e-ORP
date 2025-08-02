@@ -26,13 +26,13 @@ If you find what you believe is a defect in the code, please report it!
 
 ## Known Limitations and Quirks
 
-- [ ] The `i-ORP` IRMAA feature is not implemented
 - [ ] The `i-ORP` investing glide path is not implemented
 - [ ] There are undoubtedly several other missing `i-ORP` features, but none that I ever used!
 
 ## Features
 
 - [x] `e-ORP` calculates the OBBBA extra retirement tax deduction ($6000 over 65 between the years 2025 through 2028), and does the phase out for MAGIs above $150,000 (joint, $75,000 single)
+- [x] `e-ORP` calculates the IRMAA amount, including Medicare Part B base premium and both Part B and Part D surcharges, and subtracts it from SSA benefits when calculating disposable income
 
 ## Basic Usage Instructions
 
