@@ -91,10 +91,15 @@ otherwise works well. The I sought out a non-linear solver.
 
 For the non-linear programming solver I turned to [PySCIPopt](https://pyscipopt.readthedocs.io/en/latest/index.html).
 The transition was easy, and it handles the capital gains calculation... usually. 
-See [my issue](https://github.com/scipopt/PySCIPOpt/issues/1039)... still pending.
+I had to set some upper bounds on variables in the model for SCIP's solver
+to make progress fast enough for reasonable interactivity, and still the solver can
+take quite a long time. 
 So, I made the non-linear constraints in the NLP solver optional with a UI button, 
 and added an "opinionated" alternative: use up to a configurable fraction of the 
 afterTax account basis each year. The makes a nice interactive "what-if" tool.
+There are also some controls to optionally set a timeout and a target "gap" on the
+relative primal dual bound difference. The optimal solution is always between these
+bounds, so this provides a means of finding an "almost optimal" solution.
 
 ### e-ORP.ipynb
 

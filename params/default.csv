@@ -10,6 +10,10 @@ infs,0.04
 incn,50.0
 xinc,1.0
 xinr,0.0
+magib,42.0
+magip,40.0
+fstat,1.0
+ftab,0.0
 aage1,65.0
 aage2,65.0
 atax1,50.0
@@ -26,4 +30,3 @@ refa1,65.0
 refa2,65.0
 reta1,70.0
 reta2,65.0
-fstat,1.0

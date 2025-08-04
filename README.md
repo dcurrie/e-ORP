@@ -26,15 +26,36 @@ This tool is freely offered for your enjoyment, but please be aware that:
 
 If you find what you believe is a defect in the code, please report it!
 
-## Known Limitations and Quirks
-
-- [ ] The `i-ORP` investing glide path is not implemented
-- [ ] There are undoubtedly several other missing `i-ORP` features, but none that I ever used!
-
 ## Features
 
-- [x] `e-ORP` calculates the OBBBA extra retirement tax deduction ($6000 over 65 between the years 2025 through 2028), and does the phase out for MAGIs above $150,000 (joint, $75,000 single)
+- [x] `e-ORP` optimizes with either of two objectives: maximize annual disposable income (as `i-ORP` did) or maximize the "Plan Surplus," the Final Total Account Balance (FTAB)
+- [x] `e-ORP` calculates US Federal Income Taxes each year for Married Filing Jointly, Single, or Head of Household
+- [x] `e-ORP` calculates the OBBBA extra retirement tax deduction ($6000 over 65 between the years 2025 through 2028), and the phase out for MAGIs above $150,000 (joint, $75,000 single)
 - [x] `e-ORP` calculates the IRMAA amount, including Medicare Part B base premium and both Part B and Part D surcharges, and subtracts it from SSA benefits when calculating disposable income
+- [x] `e-ORP` calculates Required Minimum Distributions (RMDs) from tax-deferred accounts
+- [x] `e-ORP` will optionally include Roth Conversions in the plan to achieve the objective
+- [x] `e-ORP` implements the Traditional Spend Model (TSM), calculating the maximum initial spending for the first year of retirement and adjusts it for all subsequent years by the spending inflation rate specified
+- [ ] `e-ORP` can be configured to make Qualified Charitable Distributions (QCDs) to reduce taxable income from RMDs
+
+## Known Limitations and Quirks
+
+- [ ] `e-ORP` only handles decumulation, it makes no contributions to retirement accounts
+- [ ] The `i-ORP` investing glide path is not implemented
+- [ ] Spending models other than TSM (above) are not implemented
+- [ ] There is no support for annuities or tontines
+- [ ] There is no support for pensions
+- [ ] There is no accounting for State income tax
+- [ ] There is no support for non-liquid assets (home sales, reverse mortgages, etc.)
+- [ ] There is no support for Affordable Care Act (ACA) income limitation
+- [ ] There are undoubtedly several other missing `i-ORP` features, but none that I ever used!
+
+### Why make `e-ORP` available with all these limitations?
+
+`e-ORP` is useful to me, and might be of use to others. I offer it in that spirit.
+
+Releasing `e-ORP` as open source software opens the door to enhancements by others, and to "forks." 
+
+If `e-ORP` proves useful, maintenance can be taken on by anyone with Python skills, so it does not depend on my support to continue.
 
 ## Basic Usage Instructions
 
