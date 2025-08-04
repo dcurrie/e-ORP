@@ -49,4 +49,114 @@ LP solver to set the fraction of cost basis that may be applied to reduce capita
 This gives me a satisfactory view of the benefits of realizing capital gains at various 
 liquidation rates, or deferring altogether if the solver determines that it would be optimal. 
 
+## Limits
+
+The limits are based on US household retirement savings statistics from the US Federal Reserve 2022 
+Survey of Consumer Finances, which includes 2023 data. It is scheduled to be updated next in 2026.
+
+Here are the data (inflation indexed to 2022) for the age bracket 65-69:
+
+| category|  strict definition | expansive definition |
+| :---    |          ---:      |                 ---: |
+| average |           $337,197 |             $785,099 |
+| top 1%  |	        $4,574,000 |          $10,424,000 |
+
+Strict definition of retirement savings – "retirement accounts" and any defined benefit plans which have a cash value;
+it includes IRAs, Keoghs, Pensions, and Thrift-type accounts (such as your 401(k) or 403(b)).
+
+Expansive definition of retirement savings - adds "non-retirement accounts;" it includes all financial assets
+other than the cash value of Whole Life Insurance, Trust, and non-liquid assets like collectables.
+
+Adjusting these values to 2025 I considered a 3% adjustment per year, which matches or exceeds the CPI inflation rates 
+measured in June 2023, 2024, 2025; 1.03^3 = 1.093. The markets did much better than that over the period, though, 
+with the allocation fund category 3-year return currently at 11%; 1.11^3 = 1.368. If we use the higher number, the 
+2025 adjusted values are:
+
+| category|  strict definition | expansive definition |
+| :---    |          ---:      |                 ---: |
+| average |           $461,285 |           $1,074,015 |
+| top 1%  |	        $6,257,232 |          $14,260,032 |
+
+For age 80+ the 2025 adjusted values are:
+
+| category|  strict definition | expansive definition |
+| :---    |          ---:      |                 ---: |
+| average |           $212,528 |           $1,001,075 |
+| top 1%  |	        $4,296,888 |          $18,316,152 |
+
+I suspect that any household in "the 1%" has a real financial advisor, and wouldn't need one who only plays
+a financial advisor on GitHub. So, the model limits are based on the top 1% values. For each year in the 
+model we'll adjust them by the input inflation factor. 
+
+For total account values, we'll use the biggest number in the tables above, $18,316,152.
+Since we don't want to limit the solver's flexibility in moving funds among the various 
+account buckets, we'll use the same number for all accounts.
+
+Roth Conversions are unlimited by law. So, we'll use the total account value limit despite the
+unlikelihood of ever coming close to that.
+
+The IRS Uniform Life Table for RMD Calculations has a Distribution Period in Years of 6.0 for 
+age 101. That means the maximum RMD would be 1/6 of the total account value.
+
+Other account withdrawals are to cover necessary expenses, like taxes and IRMAA, and to make 
+disposable income. Can we all agree that $3MM a year is enough!? ;-)
+
+Dividends depend on the configured rate of return on bonds. Even at 12% we have less than 
+$500,000 on a maxed out after tax account.
+
+The maximum Social Security retirement benefit in 2025 is $5,108/month, $61,296 annually. 
+But taxable income also includes those age 101 RMDs... so we'll use double that value
+plus a fudge for dividends, Social Security income, and miscellaneous income.
+
+Income tax on that would be $2,187,171. Yikes!
+
+Individual tax brackets are limited by definition, except for the highest bracket for which
+we'll use the taxable income limit.
+
+Here are the limits scaled for `e-ORP` ($000):
+
+| model variable   | limit year 1 of plan |
+|      ---:        |                 ---: |
+| `afterTax`       |              18316.2 |
+| `aTax_basis`     |              18316.2 |
+| `e_Roth`         |              18316.2 |
+| `e_Taxd`         |              18316.2 |
+| `j_Roth`         |              18316.2 |
+| `j_Taxd`         |              18316.2 |
+| `net_pretax`     |              18316.2 |
+| `e_RothConv`     |              18316.2 |
+| `j_RothConv`     |              18316.2 |
+| `e_RMD`          |               3052.7 |
+| `j_RMD`          |               3052.7 |
+| `from_eRoth`     |               3052.7 |
+| `from_jRoth`     |               3052.7 |
+| `from_eTaxd`     |               3052.7 |
+| `from_jTaxd`     |               3052.7 |
+| `from_aTax`      |               3052.7 |
+| `to_aTax`        |               3052.7 |
+| `income_reqd`    |               6969.7 |
+| `auto_income`    |               6969.7 |
+| `taxable_income` |               6969.7 |
+| `MAGI`           |               6969.7 |
+| `capgains`       |               3052.7 |
+| `dividends`      |                500.0 |
+| `income_tax`     |               2187.2 |
+| `IRMAA`          |                 20.0 |
+| `taxb`           |                 20.0 |
+| `tax0`           |                 50.0 |
+| `tax1`           |                 30.0 |
+| `tax2`           |                 80.0 |
+| `tax3`           |                120.0 |
+| `tax4`           |                220.0 |
+| `tax5`           |                120.0 |
+| `tax6`           |                280.0 |
+| `tax7`           |               6969.7 |
+| `obbba_exc`      |               6969.7 |
+| `cgt0`           |                140.0 |
+| `cgt15`          |                 80.0 |
+| `cgt20`          |               6969.7 |
+| `ncgt0`          |                140.0 |
+| `ncgt15`         |                 80.0 |
+| `ncgt20`         |               6969.7 |
+
 
