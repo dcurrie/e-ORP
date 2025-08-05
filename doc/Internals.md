@@ -158,5 +158,31 @@ Here are the limits scaled for `e-ORP` ($000):
 | `ncgt0`          |                140.0 |
 | `ncgt15`         |                 80.0 |
 | `ncgt20`         |               6969.7 |
+| `QCD`            |                220.0 |
+| `nQCD`     c     |                220.0 |
 
+## Qualified Charitable Distributions (QCD)
 
+I considered using a percentage of RMD, or a fixed amount contingent on RMD, but settled
+on a defined annual charitable contribution that the plan maker intends to make independent
+of any qualification. In other words, the charitable contribution does not enter into the 
+calculations anywhere except taxes. As long as there are sufficient tax deferred withdrawals,
+the amount of the withdrawals up to the specified annual charitable contribution amount, and
+also limited by the statute, will be considered a Qualified Charitable Distribution for tax 
+purposes. Since `e-ORP` is a spending optimizer, it will maximize the available tax deduction.
+
+The defined annual charitable contribution is indexed to inflation.
+
+## Squirreling away parameters
+
+The data dictionary (`dd` in the code) is used for inputs to the model, and outputs from the
+model. It is stored at the completion of each projection as a csv file. 
+
+The `dd` is indexed by plan year, with year 0 being the "base year." Each row of the `dd` 
+represents one plan year, and each column a parameter. The base year has only 
+inputs to the model. As such, there are unused cells in row 0 of the output columns. 
+These cells are used to hold miscellaneous inputs to the model, such as rates of return
+and inflation rate. 
+
+The `squirrel_map` is used to map names of these miscellaneous parameters and column names.
+The `set_nut` and `get_nut` functions are used to access the parameters.
