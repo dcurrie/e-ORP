@@ -35,7 +35,7 @@ If you find what you believe is a defect in the code, please report it!
 - [x] `e-ORP` calculates Required Minimum Distributions (RMDs) from tax-deferred accounts
 - [x] `e-ORP` will optionally include Roth Conversions in the plan to achieve the objective
 - [x] `e-ORP` implements the Traditional Spend Model (TSM), calculating the maximum initial spending for the first year of retirement and adjusts it for all subsequent years by the spending inflation rate specified
-- [ ] `e-ORP` can be configured to make Qualified Charitable Distributions (QCDs) to reduce taxable income from RMDs
+- [x] `e-ORP` can be configured to use Qualified Charitable Distributions (QCDs) to reduce taxable income from RMDs
 
 ## Known Limitations and Quirks
 
