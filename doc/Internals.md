@@ -180,7 +180,8 @@ model. It is stored at the completion of each projection as a csv file.
 
 The `dd` is indexed by plan year, with year 0 being the "base year." Each row of the `dd` 
 represents one plan year, and each column a parameter. The base year has only 
-inputs to the model. As such, there are unused cells in row 0 of the output columns. 
+inputs to the model. As such, there are some unused cells in row 0, such as many of 
+the output columns, and calculated columns. 
 These cells are used to hold miscellaneous inputs to the model, such as rates of return
 and inflation rate. 
 
