@@ -8,6 +8,64 @@
  <img alt="e-ORP" src="[e-ORP](https://github.com/dcurrie/e-ORP/blob/main/doc/e-ORP_dataflow.drawio.png)">
 </picture>
 
+## User Interaction
+
+`e-ORP` is implemented in a Jupyter notebook. The notebook has two cells. The top one is
+simply an intro to `e-ORP` presenting some simple instructions and a link to this User Guide.
+The bottom cell is hidden by default; it has all the Python code that runs the `e-ORP` solver.
+
+The user interface is started with the ▶ run button in the ribbon on the top of the `e-ORP` 
+Jupyter notebook. Running the top cell does nothing special (it transitions from edit to 
+view mode, but the cell should already be in view mode when the notebook is opened). Running
+the bottom cell, even hidden, presents the user interface after a few seconds of setting up.
+
+The user is presented with two sets of widgets. The top set we'll refer to as the User Inputs, 
+and the bottom set is called the User Controls. The label for the User Inputs is 
+**Set Model Parameters** and the label for the User Controls is **e-ORP Explorer**.
+
+The User Inputs can be saved to and loaded from a file to make your life easier when you want
+to revisit `e-ORP` after doing some explorations. I encourage you to save the inputs often, 
+perhaps using a unique name for each variation of inputs. The filename is set in the box labeled
+*File Name* to the left of the *Save* and *Load* buttons. The default filename is `params/fname.csv`;
+The `params` directory exists in the installation and I encourage you to use it for saving your
+inputs. The `.csv` extension indicates that the parameters are saved in Comma Separated Values file,
+and can be opened with spreadsheet programs or text editors.
+
+Unfortunately, when running on Binder, the `params` directory is on the Binder virtual machine, not
+on your local machine. The files in the `params` directory are available in the Jupyter notebook, and
+can be opened or downloaded using the Jupyter menus. You may need to turn off the *Simple* switch at 
+the bottom of the Jupyter window to see the file browser and notebook tabs. Alternatively, you can
+use the *Dump* and *Restore* buttons to place the CSV text representation of the parameters in the 
+text box to their left labeled *Param CSV*. Then you can use your browser's Copy and Paste commands
+to put the text representation in your local clipboard to do with as you please.
+
+OK, so what are these parameters?
+
+## User Input, aka Model Parameters
+
+TODO
+
+## User Controls
+
+TODO
+
+## Printing and Accessing Output Data
+
+Browsers don't print, or export to PDF, Jupyter notebook outputs well, or at all.
+
+Take a look at the *GoFullPage* plugin for Chrome if you'd really like to print `e-ORP` output. So
+far it's the only thing I've found that works.
+
+You can also copy, and download plots using the Plotly.js controls in the upper right corner of each plot.
+
+If you select and copy the text of output tables it will paste nicely into a spreadsheet.
+
+The entire **Data Dictionary** for the `e-ORP` projection is also downloaded automatically to a file. 
+The filename is configured at the bottom of the User Controls section in the textbox with label
+*Output to:*. By default the output goes to the filename `data/explore.csv`. 
+As with the input parameters, a directory exists in the installation for this purpose, `data`.
+See the description of how to retrieve files when running on Binder above.
+
 ## Data Dictionary
 
 The data dictionary (`dd` in the code) is used for inputs to the model, and outputs from the
