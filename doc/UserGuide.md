@@ -164,15 +164,15 @@ This `squirrel_map` shows the names of these miscellaneous parameters and the co
 | `filing_status` | `tax_bracket` | User input: Federal Income Tax filing status, 0: Single, 1: MFJ, 2: Head of Household |
 | `MAGI_prebase`  | `QCD_limit`   | User input: Modified Adjusted Gross Income for the year prior to the base year |
 | `rothconv_enab` | `IRMAA-buk1`  | User control: Enabled Roth Conversions |
-| `orp_objtv`     | `IRMAA-buk2`  | User control: Objective, 0.0 -> max DI, the default; 'net_pretax' -> max FTAB  |
+| `orp_objtv`     | `IRMAA-buk2`  | User control: Objective, `0.0` → max DI, the default; `net_pretax` → max FTAB  |
 | `nlp_enab`      | `IRMAA-buk3`  | User control: MINLP Solver enabled |
 | `basis_limit`   | `IRMAA-buk4`  | User control: Portion of after tax basis that may be applied in one year (non-MINLP only) |
 | `gap_limit`     | `IRMAA-buk5`  | User control: Minimum primal/dual relative gap for solver (MINLP only) |
+| `time_limit`    | `IRMAA-chg4`  | User control: Maximum time in seconds for solver to run |
 | `scip_status`   | `IRMAA-chg0`  | Output: Solver status |
 | `scip_stage`    | `IRMAA-chg1`  | Output: Solver stage |
 | `scip_gap`      | `IRMAA-chg2`  | Output: Solver primal/dual relative gap achieved |
 | `scip_time`     | `IRMAA-chg3`  | Output: Solver time in seconds |
-|                 | `IRMAA-chg4`  |   |
 |                 | `IRMAA-chg5`  |   |
 | `e-ORP_version` | `from_aTax`   | Version number of the e-ORP implementation that calculated this projection |
 

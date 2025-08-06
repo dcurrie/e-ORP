@@ -1,4 +1,4 @@
-# e-ORP
+# 
 
 <picture>
  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/e-orp-dark-logo-240.png">
@@ -10,9 +10,8 @@
 
 Optimal Retirement Planner
 
-Inspired by the now unmaintained (and unavailable?) `i-ORP` by James Welch, this
-is a Jupyter notebook version of that optimizer. It is far less capable, and 
-still quite new.
+Inspired by the now unmaintained (and unavailable?) `i-ORP` by James S. Welch Jr., this
+is a Jupyter notebook version of that optimizer. It is far less capable, and still quite new.
 
 ## DISCLAIMER
 
