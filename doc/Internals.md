@@ -3,9 +3,9 @@
 The model is fairly simple...
 
 <picture>
- <source media="(prefers-color-scheme: dark)" srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/e-ORP_model_dark.drawio.png">
- <source media="(prefers-color-scheme: light)" srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/e-ORP_model.drawio.png">
- <img alt="e-ORP Model" src="[e-ORP](https://github.com/dcurrie/e-ORP/blob/main/doc/e-ORP_model.drawio.png)">
+ <source media="(prefers-color-scheme: dark)" srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/img/e-ORP_model_dark.drawio.png">
+ <source media="(prefers-color-scheme: light)" srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/img/e-ORP_model.drawio.png">
+ <img alt="e-ORP Model" src="[e-ORP](https://github.com/dcurrie/e-ORP/blob/main/doc/img/e-ORP_model.drawio.png)">
 </picture>
 
 We set up PySCIPopt to maintain the model and either

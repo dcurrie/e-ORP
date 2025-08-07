@@ -3,9 +3,9 @@
 ## Data Flow
 
 <picture>
- <source media="(prefers-color-scheme: dark)" srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/e-ORP_dataflow.drawio.png">
- <source media="(prefers-color-scheme: light)" srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/e-ORP_dataflow.drawio.png">
- <img alt="e-ORP" src="[e-ORP](https://github.com/dcurrie/e-ORP/blob/main/doc/e-ORP_dataflow.drawio.png)">
+ <source media="(prefers-color-scheme: dark)" srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/img/e-ORP_dataflow.drawio.png">
+ <source media="(prefers-color-scheme: light)" srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/img/e-ORP_dataflow.drawio.png">
+ <img alt="e-ORP" src="[e-ORP](https://github.com/dcurrie/e-ORP/blob/main/doc/img/e-ORP_dataflow.drawio.png)">
 </picture>
 
 ## User Interaction
