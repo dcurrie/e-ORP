@@ -34,13 +34,17 @@ If you find what you believe is a defect in the code, please report it!
 - [x] `e-ORP` calculates Required Minimum Distributions (RMDs) from tax-deferred accounts
 - [x] `e-ORP` will optionally include Roth Conversions in the plan to achieve the objective
 - [x] `e-ORP` implements the Traditional Spend Model (TSM), calculating the maximum initial spending for the first year of retirement and adjusts it for all subsequent years by the spending inflation rate specified
+- [x] `e-ORP` implements the Changing Consumption Spend Model, the "smile" curve, calculating the maximum initial spending for the first year of retirement and adjusts it for all subsequent years by the smile curve based on the spending inflation rate and anticipated spending level specified
 - [x] `e-ORP` can be configured to use Qualified Charitable Distributions (QCDs) to reduce taxable income from RMDs
 
 ## Known Limitations and Quirks
 
 - [ ] `e-ORP` only handles decumulation, it makes no contributions to retirement accounts
+- [ ] `e-ORP` does not handle separate planning horizons for the two spouses
 - [ ] The `i-ORP` investing glide path is not implemented
-- [ ] Spending models other than TSM (above) are not implemented
+- [ ] nor is the Monte Carlo Risk Assessment
+- [ ] nor is the 3-PEAT simulation
+- [ ] Spending models other than TSM and Changing Consumption (above) and are not implemented
 - [ ] There is no support for annuities or tontines
 - [ ] There is no support for pensions
 - [ ] There is no accounting for State income tax
