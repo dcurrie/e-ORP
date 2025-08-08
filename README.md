@@ -47,8 +47,9 @@ If you find what you believe is a defect in the code, please report it!
 - [ ] nor is the Monte Carlo Risk Assessment
 - [ ] nor is the 3-PEAT simulation
 - [ ] Spending models other than TSM and Changing Consumption (above) and are not implemented
-- [ ] There is no support for tontines
+- [ ] There is no support for Extraordinary Non-recurring Expenses
 - [ ] There is no accounting for State income tax
+- [ ] There is no support for tontines
 - [ ] There is no support for non-liquid assets (home sales, reverse mortgages, etc.)
 - [ ] There is no support for Affordable Care Act (ACA) income limitation
 - [ ] There are undoubtedly several other missing `i-ORP` features, but none that I ever used!
