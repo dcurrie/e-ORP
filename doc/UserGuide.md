@@ -45,6 +45,16 @@ OK, so what are these parameters?
 
 TODO
 
+When there are different planning horizons for each spouse:
+- [ ] After one spouse leaves the plan, assets are transferred to remaining spouse...
+- [x] The Tax Deferred is left separate but we use the remaining spouse's RMD_factor for the departed spouse's account
+- [x] for Roth we can just leave things alone; Roth Conversions may happen, but it's ok since we assume assets are merged
+- [x] for afterTax there is nothing to do since it's already co-mingled
+- [x] spending is reduced by 25% to mimic `i-ORP`; (just: 0.75 * dd['spend_δ'][year_after_horizon'])
+- [x] adjust SSA... the remaining spouse gets the larger of either of the two spouses' benefits
+- [x] adjust dd['pension_income'][year_after_horizon...] of deceased spouse using pinh1_box.value or pinh2_box.value
+- [x] change filing status to Single for year_after_horizon... and compute brackets appropriately
+
 ## User Controls
 
 TODO
