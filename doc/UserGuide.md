@@ -115,7 +115,8 @@ All dollar amounts are in $000s.
 | `income_tax`     |    | out | Calculated income tax for the year |
 | `tax_bracket`    | 🌰 | out | Marginal income tax bracket for the year |
 | `cgains_rate`    |    | out | Marginal capital gains tax rate for the year |
-| `from_aTax`      | 🌰 | out | The amount of the after tax account withdrawn for the year, or deposited there if negative |
+| `from_aTax`      | 🌰 | out | The amount withdrawn from the after tax account for the year |
+| `to_aTax`        |    | out | The amount deposited to the after tax account for the year |
 | `from_eRoth`     |    | out | The amount of the spouse e Roth withdrawn for the year, excluding Roth conversion  |
 | `from_jRoth`     |    | out | The amount of the spouse j Roth withdrawn for the year, excluding Roth conversion  |
 | `from_eTaxd`     |    | out | The amount of the spouse e tax deferred account withdrawn for the year, excluding Roth conversion and RMD |
