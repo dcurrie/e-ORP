@@ -32,13 +32,13 @@ If you find what you believe is a defect in the code, please report it!
 - [x] `e-ORP` calculates the OBBBA extra retirement tax deduction ($6000 over 65 between the years 2025 through 2028), and the phase out for MAGIs above $150,000 (joint, $75,000 single)
 - [x] `e-ORP` calculates the IRMAA amount, including Medicare Part B base premium and both Part B and Part D surcharges, and subtracts it from SSA benefits when calculating disposable income
 - [x] `e-ORP` calculates Required Minimum Distributions (RMDs) from tax-deferred accounts
-- [x] `e-ORP` will optionally include Roth Conversions in the plan to achieve the objective
+- [x] `e-ORP` will optionally include Roth Conversions in the plan, up to a specified tax bracket or unlimited, to achieve the objective
 - [x] `e-ORP` implements the Traditional Spend Model (TSM), calculating the maximum initial spending for the first year of retirement and adjusts it for all subsequent years by the spending inflation rate specified
 - [x] `e-ORP` implements the Changing Consumption Spend Model, the "smile" curve, calculating the maximum initial spending for the first year of retirement and adjusts it for all subsequent years by the smile curve based on the spending inflation rate and anticipated spending level specified
 - [x] `e-ORP` implements support for a taxable pension or annuity for each spouse, each with three options: fixed payments, COLA payments, lump sum distribution
-- [ ] and TODO survivor benefits
+- [x] and TODO survivor benefits
 - [x] `e-ORP` can be configured to use Qualified Charitable Distributions (QCDs) to reduce taxable income from RMDs
-- [ ] `e-ORP` TODO: does not handle separate planning horizons for the two spouses
+- [x] `e-ORP` handles separate planning horizons for the two spouses
 
 ## Known Limitations and Quirks
 
