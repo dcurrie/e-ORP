@@ -39,13 +39,13 @@ If you find what you believe is a defect in the code, please report it!
 - [x] and TODO survivor benefits
 - [x] `e-ORP` can be configured to use Qualified Charitable Distributions (QCDs) to reduce taxable income from RMDs
 - [x] `e-ORP` handles separate planning horizons for the two spouses
+- [x] `e-ORP` optionally implements the decumulation phase of the `i-ORP` investing glide path
 
 ## Known Limitations and Quirks
 
 - [ ] `e-ORP` only handles decumulation, it makes no contributions to retirement accounts
-- [ ] The `i-ORP` investing glide path is not implemented
-- [ ] nor is the Monte Carlo Risk Assessment
-- [ ] nor is the 3-PEAT simulation
+- [ ] `e-ORP` does not implement the `i-ORP` Monte Carlo Risk Assessment
+- [ ] nor the 3-PEAT simulation
 - [ ] Spending models other than TSM and Changing Consumption (above) and are not implemented
 - [ ] There is no support for Extraordinary Non-recurring Expenses
 - [ ] There is no accounting for State income tax
