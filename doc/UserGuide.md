@@ -178,8 +178,8 @@ This `squirrel_map` shows the names of these miscellaneous parameters and the co
 | `MAGI_prebase`  | `QCD_limit`   | User input: Modified Adjusted Gross Income for the year prior to the base year |
 | `rothconv_enab` | `IRMAA-buk1`  | User control: Enabled Roth Conversions |
 | `orp_objtv`     | `IRMAA-buk2`  | User control: Objective, `0.0` → max DI, the default; `net_pretax` → max FTAB  |
-| `nlp_enab`      | `IRMAA-buk3`  | User control: MINLP Solver enabled |
-| `basis_limit`   | `IRMAA-buk4`  | User control: Portion of after tax basis that may be applied in one year (non-MINLP only) |
+|                 | `IRMAA-buk3`  |  |
+|                 | `IRMAA-buk4`  |  |
 | `gap_limit`     | `IRMAA-buk5`  | User control: Minimum primal/dual relative gap for solver (MINLP only) |
 | `time_limit`    | `IRMAA-chg4`  | User control: Maximum time in seconds for solver to run |
 | `Roth_conv_max` | `IRMAA-chg5`  | User control: Maximum tax bracket for Roth conversions |
@@ -189,3 +189,9 @@ This `squirrel_map` shows the names of these miscellaneous parameters and the co
 | `scip_time`     | `IRMAA-chg3`  | Output: Solver time in seconds |
 | `e-ORP_version` | `from_aTax`   | Version number of the e-ORP implementation that calculated this projection |
 
+Deprecated:
+
+| Name            | Column        | Description |
+| :---            | :---          | :---        |
+| `nlp_enab`      | `IRMAA-buk3`  | User control: MINLP Solver enabled |
+| `basis_limit`   | `IRMAA-buk4`  | User control: Portion of after tax basis that may be applied in one year (non-MINLP only) |
