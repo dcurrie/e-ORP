@@ -182,10 +182,10 @@ This `squirrel_map` shows the names of these miscellaneous parameters and the co
 | `basis_limit`   | `IRMAA-buk4`  | User control: Portion of after tax basis that may be applied in one year (non-MINLP only) |
 | `gap_limit`     | `IRMAA-buk5`  | User control: Minimum primal/dual relative gap for solver (MINLP only) |
 | `time_limit`    | `IRMAA-chg4`  | User control: Maximum time in seconds for solver to run |
+| `Roth_conv_max` | `IRMAA-chg5`  | User control: Maximum tax bracket for Roth conversions |
 | `scip_status`   | `IRMAA-chg0`  | Output: Solver status |
 | `scip_stage`    | `IRMAA-chg1`  | Output: Solver stage |
 | `scip_gap`      | `IRMAA-chg2`  | Output: Solver primal/dual relative gap achieved |
 | `scip_time`     | `IRMAA-chg3`  | Output: Solver time in seconds |
-|                 | `IRMAA-chg5`  |   |
 | `e-ORP_version` | `from_aTax`   | Version number of the e-ORP implementation that calculated this projection |
 
