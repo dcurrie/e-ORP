@@ -55,9 +55,64 @@ When there are different planning horizons for each spouse:
 - [x] adjust dd['pension_income'][year_after_horizon...] of deceased spouse using pinh1_box.value or pinh2_box.value
 - [x] change filing status to Single for year_after_horizon... and compute brackets appropriately
 
+
+## Capital Gains
+
+Capital Gains calculations only pertain to the After Tax portion of the portfolio. 
+
+`e-ORP` maintains the After Tax account as four separate sub-accounts: Bonds, Cash, Cost Basis of Stock sub-account, 
+Unrealized Gains of Stock sub-account. These are initialized using the user inputs: After Tax account balance, 
+Cost Basis of Stock sub-account, and percentage of After Tax account in stocks, and in bonds (the rest is cash).
+
+The `e-ORP` LP Optimizer is then free to withdraw from any of these sub-accounts independently, or deposit to them,
+subject to the constraints that deposits from outside the stock sub-accounts go to the Cost Basis, and growth 
+of the stock sub-accounts based on the ROR specified by the user goes to the Unrealized Gains.
+
+Capital Gains are a difficult calculation for an LP Optimizer. It would like to keep taxable gains as low as 
+possible when tax rates are high, so if there is a Cost Basis the optimizer would like to spend the Cost Basis 
+portion of the account, but not the Realized Gain portion. In reality we can't do this. Even if we could choose
+the stock lots in our portfolio with the highest Cost Basis percentage, that percentage is unlikely to be 100%
+unless we have no Realized Gains in the account. We'd like to limit the optimizer's ability to do this.
+
+On the other hand, spending as much of the Realized Gains as possible when capital gains taxes are low is 
+perfectly fine. This is just tax-gain harvesting, and can be accomplished in real life by selling the entire stock 
+portion of the account and buying back whatever isn't otherwise spent.
+
+The solution I used in earlier simulators was to constrain withdrawals from the After Tax account so that the 
+same percentage was taken from each sub account, or at least the same percentage from the Cost Basis and 
+Unrealized Gains. Unfortunately, this is not a linear calculation (since it needs to find the ratio of Cost Basis
+and Unrealized Gains), so it can't be done in an LP optimizer.
+
+One solution is to just let the optimizer go and let it take unrealistic withdrawals from the Cost Basis. This
+was not satisfying to me. So, `e-ORP` provides a User Control to place a limit on how much of the Unrealized Gains
+must be withdrawn (and Capital Gains realized) for a withdrawal from the Cost Basis.
+
+
+
+
 ## User Controls
 
 TODO
+
+## Reports
+
+### Nominal Spending Table
+
+| Column Name    | Description |
+| :---:          | :--- |
+| `year`         | The calendar year |
+| `e`            | Age of spouse 1 |
+| `j`            | Age of spouse 2 |
+| `fixed_income` | The sum of RMDs, SSA and pension income, miscellaneous income, and dividends (+) |
+| `withdrawals`  | Withdrawals from all accounts (+), including Roth Conversions (+) |
+| `transfers`    | Transfers into the After Tax account (-) and Roth Conversions (-) |
+| `IRMAA-bins`   | The IRMAA bracket as a unary number |
+| `IRMAA`        | The calculated IRMAA, the full cost of Medicare Part B plus the Part D adjustment (-) |
+| `income_tax`   | Federal Income Tax (-) |
+| `DI`           | Disposable Income (+) |
+
+The disposable income `DI` 
+is the sum of the columns: `fixed_income`, `withdrawals`, `transfers`, `IRMAA`, and `income_tax`.
 
 ## Printing and Accessing Output Data
 
@@ -179,7 +234,7 @@ This `squirrel_map` shows the names of these miscellaneous parameters and the co
 | `rothconv_enab` | `IRMAA-buk1`  | User control: Enabled Roth Conversions |
 | `orp_objtv`     | `IRMAA-buk2`  | User control: Objective, `0.0` → max DI, the default; `net_pretax` → max FTAB  |
 |                 | `IRMAA-buk3`  |  |
-|                 | `IRMAA-buk4`  |  |
+| `min_realized`  | `IRMAA-buk4`  | User control: Minimum realized gain as a percentage of cost basis withdrawn that must be taken in any year (non-MINLP only) |
 | `gap_limit`     | `IRMAA-buk5`  | User control: Minimum primal/dual relative gap for solver (MINLP only) |
 | `time_limit`    | `IRMAA-chg4`  | User control: Maximum time in seconds for solver to run |
 | `Roth_conv_max` | `IRMAA-chg5`  | User control: Maximum tax bracket for Roth conversions |
@@ -194,4 +249,3 @@ Deprecated:
 | Name            | Column        | Description |
 | :---            | :---          | :---        |
 | `nlp_enab`      | `IRMAA-buk3`  | User control: MINLP Solver enabled |
-| `basis_limit`   | `IRMAA-buk4`  | User control: Portion of after tax basis that may be applied in one year (non-MINLP only) |
