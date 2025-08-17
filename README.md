@@ -35,8 +35,7 @@ If you find what you believe is a defect in the code, please report it!
 - [x] `e-ORP` will optionally include Roth Conversions in the plan, up to a specified tax bracket or unlimited, to achieve the objective
 - [x] `e-ORP` implements the Traditional Spend Model (TSM), calculating the maximum initial spending for the first year of retirement and adjusts it for all subsequent years by the spending inflation rate specified
 - [x] `e-ORP` implements the Changing Consumption Spend Model, the "smile" curve, calculating the maximum initial spending for the first year of retirement and adjusts it for all subsequent years by the smile curve based on the spending inflation rate and anticipated spending level specified
-- [x] `e-ORP` implements support for a taxable pension or annuity for each spouse, each with three options: fixed payments, COLA payments, lump sum distribution
-- [x] and TODO survivor benefits
+- [x] `e-ORP` implements support for a taxable pension or annuity for each spouse, with survivor benefits, and each pension has three options: fixed payments, COLA payments, lump sum distribution
 - [x] `e-ORP` can be configured to use Qualified Charitable Distributions (QCDs) to reduce taxable income from RMDs
 - [x] `e-ORP` handles separate planning horizons for the two spouses
 - [x] `e-ORP` optionally implements the decumulation phase of the `i-ORP` investing glide path
