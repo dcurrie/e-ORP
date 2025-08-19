@@ -84,10 +84,18 @@ Unrealized Gains. Unfortunately, this is not a linear calculation (since it need
 and Unrealized Gains), so it can't be done in an LP optimizer.
 
 One solution is to just let the optimizer go and let it take unrealistic withdrawals from the Cost Basis. This
-was not satisfying to me. So, `e-ORP` provides a User Control to place a limit on how much of the Unrealized Gains
-must be withdrawn (and Capital Gains realized) for a withdrawal from the Cost Basis.
+was not fully satisfying to me. So, `e-ORP` provides a User Control to select between unconstrained withdrawals
+from the Cost Basis, or to do "Basis Averaging" where the same proportion of the Unrealized Gains and Cost Basis
+are withdrawn (and, so, Capital Gains are realized). Unfortunately, this mode is much slower than the 
+unconstrained mode, and rarely makes much of a difference, hence the User Control, which defaults to the faster
+option.
 
-
+Handling Capital Losses is similarly fraught with non-linear-programming aspects. The Unrealized Gains sub-account
+is optionally allowed to be a negative number, one of the few in the optimizer. So, `e-ORP` provides a User Control 
+to select between allowing losses or not. Typically, when the starting Unrealized Gains is zero or more, and the 
+rates of return are all positive, there will be no losses. So, selecting the faster No Capital Losses mode is the
+obvious choice since it is much faster and equally accurate. Unfortunately, Capital Losses are needed for the 
+negative rates of return introduced by Monte Carlo or 3-PEAT, if/when these are released.
 
 
 ## User Controls
@@ -231,7 +239,7 @@ This `squirrel_map` shows the names of these miscellaneous parameters and the co
 | `inflation`     | `IRMAA-buk0`  | User input: inflation rate used for tax brackets, Social Security, etc. |
 | `filing_status` | `tax_bracket` | User input: Federal Income Tax filing status, 0: Single, 1: MFJ, 2: Head of Household |
 | `MAGI_prebase`  | `QCD_limit`   | User input: Modified Adjusted Gross Income for the year prior to the base year |
-| `rothconv_enab` | `IRMAA-buk1`  | User control: Enabled Roth Conversions |
+| `orp_mode`      | `IRMAA-buk1`  | User control: Mode: 0 → default==mode3, 1 → no capital losses, 2 → no capgains basis averaging, 3 → neither, 4 → full slow mode |
 | `orp_objtv`     | `IRMAA-buk2`  | User control: Objective, `0.0` → max DI, the default; `net_pretax` → max FTAB  |
 |                 | `IRMAA-buk3`  |  |
 | `min_realized`  | `IRMAA-buk4`  | User control: Minimum realized gain as a percentage of cost basis withdrawn that must be taken in any year (non-MINLP only) |
@@ -249,3 +257,4 @@ Deprecated:
 | Name            | Column        | Description |
 | :---            | :---          | :---        |
 | `nlp_enab`      | `IRMAA-buk3`  | User control: MINLP Solver enabled |
+| `rothconv_enab` | `IRMAA-buk1`  | User control: Enabled Roth Conversions |

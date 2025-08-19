@@ -44,10 +44,10 @@ has a separate basis, and can be sold independently. Blending the gains is not h
 person might approach divesting these positions. In some cases it makes sense to harvest
 all gains in early years, while in others there are more nuanced approaches. 
 
-With my hands tied on the "correct" approach, I added a tunable parameter to the UI for the fast 
-LP solver to set the fraction of cost basis that may be applied to reduce capital gains annually. 
-This gives me a satisfactory view of the benefits of realizing capital gains at various 
-liquidation rates, or deferring altogether if the solver determines that it would be optimal. 
+With some optimizations in the code, such as range limits on some variables, and use of an
+auxiliary variable holding the ratio, the time for the NLP version came down to minutes instead 
+of hours, and typically reaches a reasonably small primal/dual gap in a handfulf of seconds.
+So, I added User Control to select between the unconstrained approach and the ratio-metric approach.
 
 ## Limits
 
