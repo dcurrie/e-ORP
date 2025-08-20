@@ -13,6 +13,13 @@ Optimal Retirement Planner
 Inspired by the now unmaintained (and unavailable?) `i-ORP` by James S. Welch Jr., this
 is a Jupyter notebook version of that optimizer. It is less capable, and still quite new.
 
+Borrowing from `i-ORP`: The Optimal Retirement Planner (ORP) is a mathematical model that 
+computes an optimal strategic retirement decumulation plan from a set of user parameters. 
+ORP focuses on tax-advantaged and after-tax savings accounts. ORP computes a
+cash flow that maximizes the amount of money available for spending during retirement.
+ORP illustrates the power of asset compounding, implications of graduated income taxes,
+and leaving just the right size estate.
+
 ## DISCLAIMER
 
 This tool is freely offered for your enjoyment, but please be aware that:
@@ -39,8 +46,8 @@ If you find what you believe is a defect in the code, please report it!
 - [x] `e-ORP` can be configured to use Qualified Charitable Distributions (QCDs) to reduce taxable income from RMDs
 - [x] `e-ORP` handles separate planning horizons for the two spouses
 - [x] `e-ORP` optionally implements the decumulation phase of the `i-ORP` investing glide path
-- [x] `e-ORP` optimizes with either of two objectives: maximize annual disposable income (as `i-ORP` did) or maximize the "Plan Surplus," the Final Total Account Balance (FTAB), but the default and recommended mode is maximize annual disposable income
-- [x] `e-ORP` calculates capital gains taxes, and optionally will exclude up to $3000 of capital losses from ordinary income; note that losses may arise from a starting cost basis greater than the stock portion of the after tax accounts, and may also arise if there are any negative returns on investments (this is only possible when simulating losses, which is tested somewhat but note that these simulations are not available yet); note that capital losses require some non-linear programming, and slows down the optimizer quite noticeably
+- [x] `e-ORP` optimizes with either of two objectives: maximize annual disposable income (as `i-ORP` did) or maximize the "Plan Surplus," the Final Total Account Balance (FTAB), but the default and recommended mode is to maximize annual disposable income
+- [x] `e-ORP` calculates capital gains taxes, and optionally will exclude up to $3000 of capital losses from ordinary income, but does not carry over excessive losses to subsequent years; note that losses may arise from a starting cost basis greater than the stock portion of the after tax accounts, and may also arise if there are any negative returns on investments (this is only possible when simulating losses, which is tested somewhat but note that these simulations are not available yet); note that capital losses require some non-linear programming, and slows down the optimizer quite noticeably
 - [x] `e-ORP` optionally calculates an average cost basis for stock sales based on the unrealized gain/loss and size of the sale relative to the stock portion of the after tax account; computing this ratio requires some non-linear programming, and slows down the optimizer quite noticeably
 
 ## Known Limitations and Quirks
