@@ -43,18 +43,122 @@ OK, so what are these parameters?
 
 ## User Input, aka Model Parameters
 
-TODO
+Note that all dollar amount inputs are in thousands of dollars, ($000s), as in `i-ORP`. 
+
+### Base Year
+
+The first input parameter is the Base Year. This is the year for which all account values are known, or
+at least well estimated, at year end. The plan begins the year following the Base Year. Typically, a user
+might plan at the start of a year for withdrawals, Roth conversions, etc., to perform that year. So, the
+values entered are the year end values last year, the Base Year. Of course, if it is late in a year you can 
+plan for next year by instead entering this year as the Base Year, and estimating all the year end account 
+values for this year.
+
+### Plan Surplus
+
+The Plan Surplus is the value of all accounts that you wish to leave to your beneficiaries, or have available
+should you live beyond your Planning Horizon. The surplus is in current (Base Year) dollars. `e-ORP` will 
+adjust it for inflation when calculating the Final Total Asset Balance (FTAB), the amount that will actually 
+be left at the end of the plan. As `i-ORP` pointed out, the Plan Surplus can be used to control spending, or
+as longevity insurance, or as a planned legacy for your heirs. The default value is zero, the appropriate 
+amount assuming you want to spend all your money.
+
+### Ages at Base Year and Planning Horizon
+
+The next inputs are the ages of the two spouses at the end of the Base Year. If you are single, you should set 
+the age of Person to your age, and Spouse to zero.
+
+Then you set the ages of the two spouses at their Planning Horizon. Quoting `i-ORP`, 
+
+> There is a difference between your planning horizon and your life expectancy. Your planning horizon is the age
+> at which you can prudently expect for your resources to satisfy your constant spending plan.
+> Your life expectancy, as estimated by actuarial mortality tables, is probably somewhere between 78 and 85. Your 
+> planning horizon needs to be longer than your life expectancy because there is a reasonable
+> expectation that you will outlive your life expectancy and your financial planning has to account for that. 
+> (Of course, if don't exceed your life expectancy then the savings you reserved to cover spending to
+> your planning horizon becomes your estate.)
+> A married couple's two planning horizons should reflect their separate life expectancies. A single person's 
+> planning horizon reflects her life expectancy. A married couple's combined planning horizon will
+> be longer than their individual life expectancies. The IRS default value is 92 for a married couple. When the 
+> specified life expectancies are the same value then the plan proceeds in a uniform manner to its
+> full term. It should be noted when the couple are of different ages and the same planning horizon is specified 
+> for both, then the older spouse will be leaving the plan early.
+
+### Different Planning Horizon for Spouses
 
 When there are different planning horizons for each spouse:
-- [ ] After one spouse leaves the plan, assets are transferred to remaining spouse...
-- [x] The Tax Deferred is left separate but we use the remaining spouse's RMD_factor for the departed spouse's account
-- [x] for Roth we can just leave things alone; Roth Conversions may happen, but it's ok since we assume assets are merged
-- [x] for afterTax there is nothing to do since it's already co-mingled
-- [x] spending is reduced by 25% to mimic `i-ORP`; (just: 0.75 * dd['spend_δ'][year_after_horizon'])
-- [x] adjust SSA... the remaining spouse gets the larger of either of the two spouses' benefits
-- [x] adjust dd['pension_income'][year_after_horizon...] of deceased spouse using pinh1_box.value or pinh2_box.value
-- [x] change filing status to Single for year_after_horizon... and compute brackets appropriately
+- After one spouse leaves the plan, assets are transferred to remaining spouse...
+- The Tax Deferred accounts are left separate, but we use the remaining spouse's RMD_factor for the departed spouse's account
+- For Roth accounts we can just leave things alone; Roth Conversions may happen, but it's ok since we assume assets are merged
+- For the afterTax account there is nothing to do since it's already co-mingled
+- Spending is reduced by 25% to mimic `i-ORP`
+- Social Security payments are adjusted... the remaining spouse gets the larger of either of the two spouses' benefits
+- Pension income of the deceased spouse may accrue to the remaining spouse depending on the setting for "Survivor %"
+- Tax filing status is changed to Single for the year after the deceased spouse's horizon
 
+### Asset Valuations at the end of the Base Year
+
+TODO
+
+After Tax
+
+Cost Basis
+
+Traditional IRA
+
+Roth IRA
+
+### Social Security
+
+TODO
+
+### Pensions
+
+TODO
+
+### Other Income
+
+TODO
+
+### Phases of Retirement: Spending Model
+
+TODO
+
+### Phases of Retirement: Essential Spending and Extraordinary Expenses
+
+TODO
+
+### Asset Allocation & Glide Path
+
+TODO
+
+### Rates
+
+TODO
+
+### Taxes
+
+TODO
+
+### Modeling Assumptions and Constraints
+
+TODO
+
+### Parameter Save & Load
+
+TODO
+
+## User Controls
+
+TODO
+
+### Optimizer Controls
+
+TODO
+
+### Developer & SCIP Controls
+
+TODO
 
 ## Capital Gains
 
@@ -96,11 +200,6 @@ to select between allowing losses or not. Typically, when the starting Unrealize
 rates of return are all positive, there will be no losses. So, selecting the faster No Capital Losses mode is the
 obvious choice since it is much faster and equally accurate. Unfortunately, Capital Losses are needed for the 
 negative rates of return introduced by Monte Carlo or 3-PEAT, if/when these are released.
-
-
-## User Controls
-
-TODO
 
 ## Reports
 
