@@ -98,15 +98,27 @@ When there are different planning horizons for each spouse:
 
 ### Asset Valuations at the end of the Base Year
 
-TODO
+There are separate assets valuation for each spouse's accounts. This is necessary for Tax Deferred accounts where
+Required Minimum Distributions (RMDs) are based on age. Unlike `i-ORP` we also keep Roth accounts separate to 
+track Roth Conversions, but mathematically for the optimization this isn't necessary, though which account the 
+conversion comes from is necessary, again because the spouses may have different ages. The After Tax accounts are
+combined in the model.
 
-After Tax
+*After Tax* includes all accounts on which income taxes have already been paid, and so can generally be spent without
+tax implications, and have no mandatory distributions. The exception to the previous sentence are capital gains taxes.
+See [Capital Gains](#capital-gains) for the gorey details. 
 
-Cost Basis
+*Cost Basis* is the portion of the After Tax account that is the original purchase price of stocks. (Note when I say
+*stocks* I mean all stock-like securities, ETFs, mutual funds, etc., basically anything that fluctuates in value and
+upon which capital gains taxes apply.) If the Cost Basis exceeds the value of the stock portion of the account, then
+you have unrealized losses, and if it's smaller then you have unrealized gains. The size of the stock portion of the 
+account is determined using [Asset Allocation](#asset-allocation--glide-path) settings below.
 
-Traditional IRA
+*Tax Deferred* is a catch-all for all tax deferred accounts: as `i-ORP` put it: Keogh, profit sharing, IRA, 401(k), 
+457(b), and 403(b) accounts are examples of Tax-deferred accounts.
 
-Roth IRA
+*Roth IRA* is a catch-all for Roth accounts, Roth IRAs and Roth 401(k)s. These are accounts for which taxes have 
+already been paid, including on gains, and may be withdrawn with out tax implications after age 59.5.
 
 ### Social Security
 
@@ -134,7 +146,28 @@ TODO
 
 ### Rates
 
-TODO
+This section is for the rates to use for general inflation, and returns on investments. 
+
+The Inflation Rate is used to adjust IRS tax brackets annually, and to adjust Social Security payments.
+Your entered Charitable Contributions are adjusted fot inflation, as well as the entered Plan Surplus.
+You can also adjust pension payments if you choose the COLA option for that pension.
+
+The Federal Reserve's long-term target inflation rate is 2%; over the last 25 years the inflation rate
+averages 2.58%. Use your best judgement!
+
+Note that the inflation rate used for spending is independent of this rate. 
+See [Spending Model](#phases-of-retirement-spending-model)
+
+Next you have the option of using historical rates of return, or fixed average rates per asset class.
+
+`i-ORP` assumes that bond holdings are held to maturity and never result in a loss. My personal portfolio
+only has Treasury bonds (and TIPS) arranged in a 10-year ladder of 10-year bonds at least one bond maturing
+annually. So, the historical bond return used is simply the 10-year Treasury rate by year.
+
+For annual historical stock returns, `i-ORP` uses the return on the S&P 500 Index and S&P 500 Annual 
+Dividend rate.
+
+The default is to use the average rates you enter for Stocks, Bonds, and Dividends.
 
 ### Taxes
 
