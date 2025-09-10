@@ -32,7 +32,7 @@ inputs. The `.csv` extension indicates that the parameters are saved in Comma Se
 and can be opened with spreadsheet programs or text editors.
 
 Unfortunately, when running on Binder, the `params` directory is on the Binder virtual machine, not
-on your local machine. The files in the `params` directory are available in the Jupyter notebook, and
+on your local machine. The files in the `params` directory are available in Jupyter, and
 can be opened or downloaded using the Jupyter menus. You may need to turn off the *Simple* switch at 
 the bottom of the Jupyter window to see the file browser and notebook tabs. Alternatively, you can
 use the *Dump* and *Restore* buttons to place the CSV text representation of the parameters in the 
@@ -118,23 +118,54 @@ account is determined using [Asset Allocation](#asset-allocation--glide-path) se
 457(b), and 403(b) accounts are examples of Tax-deferred accounts.
 
 *Roth IRA* is a catch-all for Roth accounts, Roth IRAs and Roth 401(k)s. These are accounts for which taxes have 
-already been paid, including on gains, and may be withdrawn with out tax implications after age 59.5.
+already been paid, including on gains, and may be withdrawn without tax implications after age 59.5.
 
 ### Social Security
 
-TODO
+If you will/do receive Social Security payments, this is the place to set them up. The value *SSA/year* is the 
+person's annual Social Security benefit at the *Reference Age*. `e-ORP` adjusts this value for inflation based on 
+the difference between the person's age in the current year less the *Reference Age*. If you are already receiving
+Social Security payments, use the person's age at the end of the *Base Year* as the *Reference Age*, use your
+current monthly Social Security benefit times 12 as the *SSA/year* value, and use a *Claim Age* lower than the the 
+person's age at the end of the *Base Year*... 62 will do. If you expect to claim Social Security benefits in the 
+future, use the person's expected annual benefit as *SSA/year* at the *Reference Age*. For example, if you plan to
+claim benefits after your SSA full retirement age, you could use your full retirement age as the *Reference Age*,
+your Primary Insurance Amount (PIA) as *SSA/year*, and the age you expect to claim benefits as *Claim Age*.
 
 ### Pensions
 
-TODO
+`e-ORP` provides the same three options for pensions as `i-ORP` did. If you have a tax-exempt pension, you should 
+not enter it into `e-ORP` at all... just add your pension amount to `e-ORP`'s output to find your Disposable Income.
+
+Each spouse may enter one pension. The three payout options are: fixed annual payments, annual inflation adjusted 
+("COLA") payments, or one lump-sum payment. You can experiment with lump-sum versus annual distributions by switching
+the parameters and observing the effect on Disposable Income. The *Claim Age* is the person's age when the payments
+begin (or the one-time lump-sum payment is made). 
+
+The *Survivor (%)* is the portion of the pension payments that accrue to a surviving spouse.
 
 ### Other Income
 
-TODO
+If you have other income, such as a part time job, or an inherited IRA, enter the expected annual taxable income here.
+The *Misc. Inc. δ (%)* provides means to adjust this income over time. For example, if you expect your part time job 
+hours to decrease by half each year, use -50.
 
 ### Phases of Retirement: Spending Model
 
-TODO
+`e-ORP` provides a subset of the spending models offered by `i-ORP`. There are two options: the Traditional Spending
+Model (TSM), and the Changing Consumption model. 
+
+The Traditional Spending Model is governed strictly by inflation, though an inflation rate for spending is provided
+that is separate from the inflation rate used for tax brackets and pension/SSA adjustments. `i-ORP` calculates the 
+Disposable Income for the plan so that it increases by the *SpendRate (%)* each year. 
+
+The Changing Consumption model is based on David Blanchett's Estimating the True Cost of Retirement research. As `i-ORP`
+explains, "it uses increased spending early in retirement and toward the end with reduced spending in mid plan. Normally 
+Blanchett's values reduce the increase in spending caused by inflation. A zero inflation rate will cause retirement 
+spending to form the shape of a smile." `i-ORP` adjusts the original Blanchett (and `i-ORP`) formula to account for 
+actual inflation values since the research was conducted. The formula depends on expected annual spending since different
+levels of affluence affect spending patterns. So, the *Spending $* input is used to shape the "smile" curve, and the 
+*SpendRate (%)* is used as the spending inflation value. `i-ORP` plots the spending curve as part of the outputs.
 
 ### Phases of Retirement: Essential Spending and Extraordinary Expenses
 
