@@ -1,13 +1,5 @@
 # e-ORP User Guide
 
-## Data Flow
-
-<picture>
- <source media="(prefers-color-scheme: dark)" srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/img/e-ORP_dataflow.drawio.png">
- <source media="(prefers-color-scheme: light)" srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/img/e-ORP_dataflow.drawio.png">
- <img alt="e-ORP" src="[e-ORP](https://github.com/dcurrie/e-ORP/blob/main/doc/img/e-ORP_dataflow.drawio.png)">
-</picture>
-
 ## User Interaction
 
 `e-ORP` is implemented in a Jupyter notebook. The notebook has two cells. The top one is
@@ -169,7 +161,56 @@ levels of affluence affect spending patterns. So, the *Spending $* input is used
 
 ### Phases of Retirement: Essential Spending and Extraordinary Expenses
 
-TODO
+`e-ORP` provides a means to enter essential spending and extraordinary expenses. Generally speaking, this feature is
+counterproductive to use for normal spending since the point of the optimization is to maximize disposable income.
+The intended use of `e-ORP` is to provide an optimal (maximum) spending limit for you to compare with your desired 
+spending level. Using an essential spending amount may make the optimization fail ("infeasible" in linear programming
+optimization terminology).
+
+Nevertheless, there may be periods of your retirement plan where spending is known to exceed the usual pattern, or when
+you plan to make a major purchase, and using the Essential Spending and Extraordinary Expenses feature provides a means 
+to fit these events into the optimization. `i-ORP` explained it this way:
+
+> ORP's fundamental retirement equation is
+> DI = ES + DS
+> where:
+> DI is *Disposable Income*; after-tax income, the value that ORP maximizes;
+> ES is *Essential Spending*, contractual or other future obligations. Exactly what constitutes essential spending is left to you.
+> DS is *Discretionary Spending*, money left over for cruises and other frivolities.
+
+> ES is known spending, input by you through this form. DI and, by this equation DS, are optimal values computed by ORP.
+
+> Essential Spending is an option that allows the ORP user to anticipate the fluctuating nature of anticipated costs and save for them them over the course of retirement.
+
+> ES breaks down retirement into phases through the use of specified age ranges and corresponding ES amounts. The extraordinary event differentiating retirement phases typically pivots on a life event,
+> such as death of a spouse, a move to assisted living, moving in with a relative, etc.; any set of circumstances where ES is expected to be substantially different from the earlier retirement period. In Real
+> terms, ES remains essentially constant within any given retirement phase. Between phases ES is stepwise discontinuous with large discontinuities.
+
+> With ES specified, ORP maximizes DI as before. Since ES is fixed by you, ORP is really maximizing DS. DS is computed as your maximum, constant, after tax Discretionary Spending to be budgeted to.
+> Your total maximum Discretionary Income will vary from phase to phase, depending your amount of Essential Spending. DS is fixed at ORP's optimal values subject to inflation.
+
+There are three types of events supported: one time expense, one time income, and ongoing expense. Each is accompanied
+by a year in which the event occurs.
+
+An ongoing expense is repeated each year, adjusted for inflation from the Base Year. It sets the essential spending for
+all years from the event year until the end of plan, so a second ongoing expense entry will override any earlier entry.
+
+A one time expense is described by `i-ORP` as "anticipated to occur only once in retirement; such a CCRC entrance fee, 
+purchasing a second home, replacing the family cow, re-roofing the house, buying off your mistress, etc." 
+The specified amounts are in Base Year dollars and indexed to inflation by `e-ORP`. As `i-ORP` explains: "Your plan's 
+Withdrawal Report will reflect the effects of non-recurring expenses. It will show increased spending, seeming to violate 
+ORP's constant spending assumption, for the ages with extraordinary expenses." and "In order to stay inside the active 
+income tax brackets ORP will lay aside Tax-deferred withdrawals in your After-tax Account (or your Roth IRA if you enable 
+conversions) in the years immediately preceding the age at which the expenditure is to occur. In the year of the expense 
+the Tax-deferred withdrawal is combined with the other accounts to meet the expense. There will probably be a significant
+income tax hit." 
+
+A one time expense is added to the essential spending for that year only. Because ongoing expenses (above) set the essential 
+spending rather than increment it, you should input the ongoing expenses, if any, followed by the one time expenses.
+
+A one time income is a non-taxable event that simply deposits money into the after tax account. It can be used for "bequests, 
+life insurance proceeds, lottery winnings, and such" as `i-ORP` explains it. Unlike `i-ORP`, though, `e-ORP` does inflation 
+adjust to the Base Year.
 
 ### Asset Allocation & Glide Path
 
@@ -301,6 +342,14 @@ The filename is configured at the bottom of the User Controls section in the tex
 *Output to:*. By default the output goes to the filename `data/explore.csv`. 
 As with the input parameters, a directory exists in the installation for this purpose, `data`.
 See the description of how to retrieve files when running on Binder above.
+
+## Data Flow
+
+<picture>
+ <source media="(prefers-color-scheme: dark)" srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/img/e-ORP_dataflow.drawio.png">
+ <source media="(prefers-color-scheme: light)" srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/img/e-ORP_dataflow.drawio.png">
+ <img alt="e-ORP" src="[e-ORP](https://github.com/dcurrie/e-ORP/blob/main/doc/img/e-ORP_dataflow.drawio.png)">
+</picture>
 
 ## Data Dictionary
 
