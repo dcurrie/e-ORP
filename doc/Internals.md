@@ -18,6 +18,119 @@ We set up PySCIPopt to maintain the model and either
     - spending in each year is equal to the input income required
     - each year's income increases by the spend inflation rate
 
+## Code Organization
+
+The code is all on one (collapsed) Jupyter cell. This is primarily to reduce end user confusion by
+minimizing distractions, but it does make the code a bit daunting to read.
+
+The code is organized into these sections:
+- Python Imports
+- Historical Data
+- Output Widget declarations
+- Parameter Input Widgets
+- Tax Data
+- The Planning Data Dictionary
+- The MINLP Optimization
+- Controls and Outputs
+- User Control Widgets
+
+### Python Imports
+
+This is just administrative stuff to import the libraries we use, such as `ipywidgets`, `pandas`, 
+`plotly.express`, `IPython`, `math`, `io`, `time`, and `pyscipopt`
+
+### Historical Data
+
+An external spreadsheet has the historical data gleaned from Robert J. Schiller's published databases and
+other public sources. This small section of code reads in the CSV file, and replicates it so that using a 
+starting year near the end of the data wraps around back to the beginning (1970).
+
+### Output Widget declarations
+
+The general purpose standard output and error stream widgets are defined early so we can use them from 
+anywhere. These widgets (`drb_out` and `err_out`) are displayed in the last line of i-ORP code!
+
+### Parameter Input Widgets
+
+Next we define the parameter input widgets and lay them out. This also includes the code to dump and 
+load these parameters. Again, these widgets (in the `winputs` widget) is displayed in the last line of 
+i-ORP code in the Jupyter cell!
+
+Note that there is an odd looking hack here to support restoring non-textual widgets. See
+[the Discourse Forum discussion](https://discourse.jupyter.org/t/save-and-restore-widget-values-the-right-way/37719)
+for background or any possible workarounds.
+
+### Tax Data
+
+It might have been prudent to have put all the statutory tax data in an external spreadsheet for easier
+maintenance, but the code evolved with the tax data inline here along with some supporting calculations. 
+
+### The Planning Data Dictionary
+
+Once all the input parameters are set, the first step in the "projection" into the future is to construct 
+a data dictionary indexed by parameter and year. Essentially, anything that is preordained by the input 
+parameters is calculated in advance of the optimization phase in this data dictionary. This includes 
+some argument checking, and then year by year calculation of:
+- Ages
+- RMD factors
+- Tax rates
+- SSA and Pension incomes
+- Miscellaneous Incomes
+- Charitable Contributions
+- Phases of Retirement Expenses and Incomes
+- Asset Allocation glide path percentages
+- Spend curve
+- Rates of Return
+
+This code also manages the "squirreled away" parameters.
+
+The Planning Data Dictionary is organized so that every cell has one writer, either it is set by the 
+`make_planning_datadict` function, or perhaps some calls to `set_nut` for "squirreled away" parameters,
+or set by the optimizer, below. It represents a complete picture of the projection, and it should be
+possible to completely reconstruct the projection/optimization from the result Planning Data Dictionary.
+
+After the construction and optimization (below) phases, The Planning Data Dictionary is used as the
+sole input to the reports and plots code. 
+
+The Planning Data Dictionary is saved in a CSV file named by an input parameter. 
+
+### The MINLP Optimization
+
+The next section of code creates the "Mixed Integer Non-Linear Programming" Optimization model, and
+calls the solver. Values in the Planning Data Dictionary that are malleable by the optimizer are
+created as shadow SCIP variables, often initialized from the Base Year values in the Planning Data 
+Dictionary. Other SCIP variables are created for intermediate calculations. 
+
+Limits are set on most of the SCIP variables. These limits significantly improve solution time.
+
+The model objective is set, and then the constraints.
+
+We set some solvers parameters (see controls below), and then call the solver.
+
+Once done, we copy the relevant SCIP variables (the `OUTS`) back to the Planning Data Dictionary.
+Many of these are rounded to a dollar or so to make the output tables cleaner.
+
+The memory used by SCIP for the model is freed, and the status of the solution returned.
+
+### Controls and Outputs
+
+The Controls and Outputs section is a hodgepodge.
+
+There is a subsection for the creation of plots and tables. These are used by the functions that
+follow, which use the Planning Data Dictionary and MINLP Optimization in various ways depending on 
+the User Control Widgets, below.
+
+The functions implemented so far are the primary ORP optimization, `oorp`, the historical back test 
+`walk`, and a barely begun `three_peat`.
+
+### User Control Widgets
+
+The User Controls provide a means to vary some SCIP parameters to see how they affect optimizer 
+performance (I wish this wasn't necessary), and to select among solver modes (ditto), and to 
+select between primary ORP optimization and historical back test (and maybe some day, 3-PEAT).
+
+There's also a control for debugging use.
+
 ## Capital Gains are hard
 
 The NLP solver really doesn't like to compute the optimal withdrawal from the afterTax account when 
@@ -187,3 +300,53 @@ and inflation rate.
 
 The `squirrel_map` is used to map names of these miscellaneous parameters and column names.
 The `set_nut` and `get_nut` functions are used to access the parameters.
+
+## References
+
+### Implementation References
+
+[PyScipOpt documents](https://pyscipopt.readthedocs.io/en/latest/index.html)
+
+[PyScipOpt API](https://pyscipopt.readthedocs.io/en/latest/api.html)
+
+[SCIP documents](https://www.scipopt.org/doc/html/modules.php)
+
+[Plotly](https://plotly.com/python/figure-labels/)
+
+[ipywidgets](https://ipywidgets.readthedocs.io/en/latest/examples/Widget%20List.html)
+
+[Binder](https://mybinder.readthedocs.io/en/latest/about/user-guidelines.html)
+
+### Background references for setting limits in the i-ORP model
+
+[Total portfolio size](https://dqydj.com/average-retirement-savings/)
+
+[Total portfolio growth](https://dqydj.com/retirement-savings-by-age/)
+
+[The 1%](https://peaceofmindinvesting.com/investing/american-retirement-savings-by-age-averages-medians-and-percentiles)
+
+### i-ORP on the Wayback Machine
+
+[Extended Input Form](https://web.archive.org/web/20210203192353/https://i-orp.com/Plans/extended.html)
+
+[FAQ](https://web.archive.org/web/20201129140344/https://www.i-orp.com/Plans/faq.html)
+
+
+### Academic Papers on Retirement Planning
+
+[James S. Welch, Jr., Mitigating the Impact of Personal Income Taxes on Retirement Savings Distributions](https://issuu.com/iarfcregister/docs/vol.14issue1)
+the paper describing i-ORP
+
+[Lewis W. Coopersmith, Ph.D., and Alan R. Sumutka, CPA Tax-Efficient Retirement Withdrawal Planning Using a Linear Programming Model](https://www.financialplanningassociation.org/sites/default/files/2021-02/SEP11%20Tax-Efficient%20Retirement%20Withdrawal%20Planning%20Using%20a%20Linear%20Programming%20Model.pdf)
+another linear programming optimization tool for retirement planning
+
+### Historical Data
+
+[Robert J. Schiller](http://www.econ.yale.edu/~shiller/data.htm)
+
+[Treasury Rates](https://www.multpl.com/10-year-treasury-rate/table/by-year)
+
+[Dividend Yields](https://www.multpl.com/s-p-500-dividend-yield/table/by-year)
+
+[NYU data](https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/histretSP.html)
+

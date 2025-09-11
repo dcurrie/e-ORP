@@ -172,10 +172,15 @@ you plan to make a major purchase, and using the Essential Spending and Extraord
 to fit these events into the optimization. `i-ORP` explained it this way:
 
 > ORP's fundamental retirement equation is
+
 > DI = ES + DS
+
 > where:
+
 > DI is *Disposable Income*; after-tax income, the value that ORP maximizes;
+
 > ES is *Essential Spending*, contractual or other future obligations. Exactly what constitutes essential spending is left to you.
+
 > DS is *Discretionary Spending*, money left over for cruises and other frivolities.
 
 > ES is known spending, input by you through this form. DI and, by this equation DS, are optimal values computed by ORP.
