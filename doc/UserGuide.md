@@ -12,6 +12,7 @@ view mode, but the cell should already be in view mode when the notebook is open
 the bottom cell, even hidden, presents the user interface after a few seconds of setting up.
 
 <picture>
+ <source srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/img/jupyternb.png">
  <img alt="e-ORP Notebook" src="[e-ORP](https://github.com/dcurrie/e-ORP/blob/main/doc/img/jupyternb.png)">
 </picture>
 
@@ -40,9 +41,9 @@ OK, so what are these parameters?
 ## User Input, aka Model Parameters
 
 <picture>
+ <source srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/img/params1.png">
  <img alt="e-ORP Params 1" src="[e-ORP](https://github.com/dcurrie/e-ORP/blob/main/doc/img/params1.png)">
 </picture>
-
 
 Note that all dollar amount inputs are in thousands of dollars, ($000s), as in `i-ORP`.
 
