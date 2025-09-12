@@ -46,6 +46,7 @@ If you find what you believe is a defect in the code, please report it!
 - [x] `e-ORP` can be configured to use Qualified Charitable Distributions (QCDs) to reduce taxable income from RMDs
 - [x] `e-ORP` handles separate planning horizons for the two spouses
 - [x] `e-ORP` optionally implements the decumulation phase of the `i-ORP` investing glide path
+- [x] `e-ORP` provides a mode to use historical rates of return for "back testing" from a selected year (iterated over a decade)
 - [x] `e-ORP` optimizes with either of two objectives: maximize annual disposable income (as `i-ORP` did) or maximize the "Plan Surplus," the Final Total Account Balance (FTAB), but the default and recommended mode is to maximize annual disposable income
 - [x] `e-ORP` calculates capital gains taxes, and optionally will exclude up to $3000 of capital losses from ordinary income, but does not carry over excessive losses to subsequent years; note that losses may arise from a starting cost basis greater than the stock portion of the after tax accounts, and may also arise if there are any negative returns on investments (this is only possible when simulating losses, which is tested somewhat but note that these simulations are not available yet); note that capital losses require some non-linear programming, and slows down the optimizer quite noticeably
 - [x] `e-ORP` optionally calculates an average cost basis for stock sales based on the unrealized gain/loss and size of the sale relative to the stock portion of the after tax account; computing this ratio requires some non-linear programming, and slows down the optimizer quite noticeably
@@ -55,7 +56,7 @@ If you find what you believe is a defect in the code, please report it!
 - [ ] `e-ORP` only handles decumulation, it makes no contributions to retirement accounts
 - [ ] `e-ORP` does not implement the `i-ORP` Monte Carlo Risk Assessment
 - [ ] nor the 3-PEAT simulation
-- [ ] Spending models other than TSM and Changing Consumption (above) and are not implemented
+- [ ] Spending models other than TSM and Changing Consumption (above) are not implemented
 - [ ] There is no accounting for State income tax
 - [ ] There is no support for tontines
 - [ ] There is no support for non-liquid assets (home sales, reverse mortgages, etc.)

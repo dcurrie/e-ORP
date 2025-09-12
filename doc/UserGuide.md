@@ -11,6 +11,10 @@ Jupyter notebook. Running the top cell does nothing special (it transitions from
 view mode, but the cell should already be in view mode when the notebook is opened). Running
 the bottom cell, even hidden, presents the user interface after a few seconds of setting up.
 
+<picture>
+ <img alt="e-ORP Notebook" src="[e-ORP](https://github.com/dcurrie/e-ORP/blob/main/doc/img/jupyternb.png)">
+</picture>
+
 The user is presented with two sets of widgets. The top set we'll refer to as the User Inputs, 
 and the bottom set is called the User Controls. The label for the User Inputs is 
 **Set Model Parameters** and the label for the User Controls is **e-ORP Explorer**.
@@ -35,7 +39,12 @@ OK, so what are these parameters?
 
 ## User Input, aka Model Parameters
 
-Note that all dollar amount inputs are in thousands of dollars, ($000s), as in `i-ORP`. 
+<picture>
+ <img alt="e-ORP Params 1" src="[e-ORP](https://github.com/dcurrie/e-ORP/blob/main/doc/img/params1.png)">
+</picture>
+
+
+Note that all dollar amount inputs are in thousands of dollars, ($000s), as in `i-ORP`.
 
 ### Base Year
 
