@@ -146,6 +146,11 @@ begin (or the one-time lump-sum payment is made).
 
 The *Survivor (%)* is the portion of the pension payments that accrue to a surviving spouse.
 
+<picture>
+ <source srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/img/params2.png">
+ <img alt="e-ORP Params 1" src="[e-ORP](https://github.com/dcurrie/e-ORP/blob/main/doc/img/params2.png)">
+</picture>
+
 ### Other Income
 
 If you have other income, such as a part time job, or an inherited IRA, enter the expected annual taxable income here.
@@ -229,7 +234,25 @@ adjust to the Base Year.
 
 ### Asset Allocation & Glide Path
 
-TODO
+Each of the investment types, Tax Deferred, Roth, and After Tax, have an asset allocation among asset classes. The 
+classes are stock(-like), bond(-like), and cash. The returns on each of these asset classes is specified separately
+in the [Rates](#rates) section.
+
+The percentage of each investment type invested in stocks or stock-like securities, such as stock market index ETFs,
+is specified for the base year, and the same for bonds or bond-like securities. The balance of the investment type
+is assumed to be invested in cash, i.e., if the total of stock and bond percentages is less than 100%.
+
+If the *Glide Path* is enabled, the same values are then specified for the plan horizon. `e-ORP` modifies the 
+allocation from the beginning to the end of the plan linearly to reach the specified end of plan allocation.
+
+Be wary of setting the asset allocation differently among the investment types. `e-ORP` will move funds among
+the investment types, e.g., from Roth to After Tax, or from Tax Deferred to Roth using Roth conversions, to 
+seek the highest after tax return, and this may not be what you expected, or wanted.
+
+<picture>
+ <source srcset="https://github.com/dcurrie/e-ORP/blob/main/doc/img/params3.png">
+ <img alt="e-ORP Params 1" src="[e-ORP](https://github.com/dcurrie/e-ORP/blob/main/doc/img/params3.png)">
+</picture>
 
 ### Rates
 
@@ -258,7 +281,16 @@ The default is to use the average rates you enter for Stocks, Bonds, and Dividen
 
 ### Taxes
 
-TODO
+In order to calculate IRMAA correctly, `e-ORP` needs to look back two years at your Modified Adjusted Gross
+Income (MAGI). `e-ORP` simplifies the MAGI calculation internally by assuming it is simply the year's
+taxable income including capital gains, plus the excluded part of SSA income and any QCDs. You should
+enter your MAGI for the *Base Year* and the year before the *Base Year* here.
+
+Next is a place to enter Qualified Charitable Contributions. These are a portion of your RMDs that are sent
+by your brokerage to the charity, and can then be deducted from income for tax purposes. `e-ORP` indexes 
+the value entered to inflation from the *Base Year* and performs the appropriate deduction. `e-ORP` imposes
+a limit of $108,000 on QCDs per person per year over 70.5; it does not remove the QCD from Disposable Income,
+however, so you need to take this into account.
 
 ### Modeling Assumptions and Constraints
 
