@@ -20,6 +20,8 @@ The user is presented with two sets of widgets. The top set we'll refer to as th
 and the bottom set is called the User Controls. The label for the User Inputs is 
 **Set Model Parameters** and the label for the User Controls is **e-ORP Explorer**.
 
+### Parameter Save & Load
+
 The User Inputs can be saved to and loaded from a file to make your life easier when you want
 to revisit `e-ORP` after doing some explorations. I encourage you to save the inputs often, 
 perhaps using a unique name for each variation of inputs. The filename is set in the box labeled
@@ -294,11 +296,40 @@ however, so you need to take this into account.
 
 ### Modeling Assumptions and Constraints
 
-TODO
+`e-ORP` only handles decumulation, it makes no contributions to retirement accounts
 
-### Parameter Save & Load
+`e-ORP` does not restrict withdrawals from retirement plans before age 59 1/2 (i.e., there's no penalty applied)
 
-TODO
+`e-ORP` does not implement the `i-ORP` Monte Carlo Risk Assessment, nor the 3-PEAT simulation
+
+`i-ORP` spending models other than TSM and Changing Consumption (above) are not implemented
+
+There is no accounting for State income tax
+
+There is no support for tontines
+
+There is no support for non-liquid assets (home sales, reverse mortgages, etc.)
+
+There is no support for Affordable Care Act (ACA) income limitation
+
+There are undoubtedly several other missing `i-ORP` features, but none that I ever used!
+
+RMDs are taken starting at age 73; the first year RMD is not deferred to April 15 of the following year.
+Beginning in 2033 the RMD age will rise to 75. This change will apply to individuals born 
+in 1960 or later. This is not yet implemented in `e-ORP`.
+
+`e-ORP` assumes that 85% of Social Security benefits are taxed regardless of your "provisional income" level.
+
+`e-ORP` does not handle Net Investment Income Taxes (NIIT). The NIIT applies at a rate of 3.8% to certain net 
+investment income of individuals, estates and trusts that have income above the statutory threshold amounts.
+This MAGI threshold is $250,000 for married filing jointly, $200,000 for single, and $200,000 for head of household.
+These threshold amounts are not indexed for inflation. You pay the NIIT based on the lesser of your net investment 
+income or the amount by which your MAGI surpasses the filing status-based threshold. Investment income includes
+interest, capital gains, dividends, rental and royalty income; excludes wages, social security, pensions.
+
+See [Limits](https://github.com/dcurrie/e-ORP/blob/main/doc/Internals.md#limits)
+
+TODO more implicit assumptions
 
 ## User Controls
 
