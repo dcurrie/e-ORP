@@ -294,54 +294,70 @@ the value entered to inflation from the *Base Year* and performs the appropriate
 a limit of $108,000 on QCDs per person per year over 70.5; it does not remove the QCD from Disposable Income,
 however, so you need to take this into account.
 
-### Modeling Assumptions and Constraints
-
-`e-ORP` only handles decumulation, it makes no contributions to retirement accounts
-
-`e-ORP` does not restrict withdrawals from retirement plans before age 59 1/2 (i.e., there's no penalty applied)
-
-`e-ORP` does not implement the `i-ORP` Monte Carlo Risk Assessment, nor the 3-PEAT simulation
-
-`i-ORP` spending models other than TSM and Changing Consumption (above) are not implemented
-
-There is no accounting for State income tax
-
-There is no support for tontines
-
-There is no support for non-liquid assets (home sales, reverse mortgages, etc.)
-
-There is no support for Affordable Care Act (ACA) income limitation
-
-There are undoubtedly several other missing `i-ORP` features, but none that I ever used!
-
-RMDs are taken starting at age 73; the first year RMD is not deferred to April 15 of the following year.
-Beginning in 2033 the RMD age will rise to 75. This change will apply to individuals born 
-in 1960 or later. This is not yet implemented in `e-ORP`.
-
-`e-ORP` assumes that 85% of Social Security benefits are taxed regardless of your "provisional income" level.
-
-`e-ORP` does not handle Net Investment Income Taxes (NIIT). The NIIT applies at a rate of 3.8% to certain net 
-investment income of individuals, estates and trusts that have income above the statutory threshold amounts.
-This MAGI threshold is $250,000 for married filing jointly, $200,000 for single, and $200,000 for head of household.
-These threshold amounts are not indexed for inflation. You pay the NIIT based on the lesser of your net investment 
-income or the amount by which your MAGI surpasses the filing status-based threshold. Investment income includes
-interest, capital gains, dividends, rental and royalty income; excludes wages, social security, pensions.
-
-See [Limits](https://github.com/dcurrie/e-ORP/blob/main/doc/Internals.md#limits)
-
-TODO more implicit assumptions
-
 ## User Controls
 
-TODO
+### Modeling Assumptions and Constraints
+
+These controls are useful to do "what if" testing of your results. 
+
+Will Social Security continue to be funded by the government? Or will the money run out in 2034? Use the
+*SSA Benefits are* control tp test each scenario.
+
+Sometimes you want to limit Roth Conversions to a specific tax bracket, or because you are irked by IRMAA
+even though `e-ORP` predicts you'll be better off reaching those levels. The *Roth Conversions* dropdown
+offers several options for limiting these conversions.
 
 ### Optimizer Controls
 
-TODO
+There are a few modes for running the MINLP optimizer. They all produce roughly equivalent results, so the 
+fastest mode is the default. Here are some details:
+
+#### Normal (fastest) Mode
+
+The default mode is the same as *No Losses nor Averaging* see [below](#no-losses-nor-averaging).
+
+#### No Capital Losses
+
+No capital losses are supported. This is a constraint that is normally quite easy to satisfy. As long as 
+(a) your After Tax account *Cost Basis* is less than your stock position, in other words you don't have any
+Unrealized Losses, and (b) all of your Rates of Return are positive, the plan cannot generate any losses,
+and this mode is safe to use. Using it speeds up the calculation since there are fewer nonlinear constraints.
+
+Note that when using the *Random Walk* mode with historical returns, some of which will be negative, it 
+is necessary to permit *Capital Losses* and this mode should not be used.
+
+#### No Basis Averaging
+
+Cost Basis Averaging is a feature that adds a lot of complexity for a little more accuracy. See the 
+[Capital Gains](#capital-gains) section below for an explanation. When this *No Basis Averaging* mode is 
+used, a simpler formula (unconstrained withdrawals from Cost Basis) is used to simplify the calculation
+and remove a number of nonlinear constraints to speed up the optimization.
+
+#### No Losses nor Averaging
+
+This mode enables both the *No Capital Losses* and *No Basis Averaging* features described above.
+
+#### Full (slowest) Mode
+
+This mode enables both the *Capital Losses* allowed and full *Basis Averaging* for maximum accuracy and 
+flexibility at the cost of a potentially very long solution time due to the number of nonlinear constraints.
 
 ### Developer & SCIP Controls
 
-TODO
+Because the optimizer may be very slow when nonlinear constraints are enabled, the *SCIP Controls* provide
+a means to get a solution that is close to optimal in a shorter time.
+
+The *Gap Goal on Solver* is a percentage. You can think of it roughly as: how close to optimal are you willing
+to settle for? Often the solver can get to within a fraction of a percentage of optimal and then get stuck.
+Technically, the gap is the relative difference between the primal and dual bounds of the optimizer: the 
+solution is known to be between these bounds. By default this gap is set to zero to obtain an optimal
+solution.
+
+The *Time Limit on Solver* will stop the solver after the specified number of seconds. At that point `e-ORP`
+will report the last potential solution found and the remaining primal and dual bounds gap. 
+
+The *Test* dropdown is for developers to exercise `e-ORP` modes for stressing the code or testing out new
+features. You should leave it set to *Normal Mode* or suffer the consequences!
 
 ## Capital Gains
 
@@ -420,6 +436,43 @@ The filename is configured at the bottom of the User Controls section in the tex
 *Output to:*. By default the output goes to the filename `data/explore.csv`. 
 As with the input parameters, a directory exists in the installation for this purpose, `data`.
 See the description of how to retrieve files when running on Binder above.
+
+### Modeling Assumptions and Constraints
+
+`e-ORP` only handles decumulation, it makes no contributions to retirement accounts
+
+`e-ORP` does not restrict withdrawals from retirement plans before age 59 1/2 (i.e., there's no penalty applied)
+
+`e-ORP` does not implement the `i-ORP` Monte Carlo Risk Assessment, nor the 3-PEAT simulation
+
+`i-ORP` spending models other than TSM and Changing Consumption (above) are not implemented
+
+There is no accounting for State income tax
+
+There is no support for tontines
+
+There is no support for non-liquid assets (home sales, reverse mortgages, etc.)
+
+There is no support for Affordable Care Act (ACA) income limitation
+
+There are undoubtedly several other missing `i-ORP` features, but none that I ever used!
+
+RMDs are taken starting at age 73; the first year RMD is not deferred to April 15 of the following year.
+Beginning in 2033 the RMD age will rise to 75. This change will apply to individuals born 
+in 1960 or later. This is not yet implemented in `e-ORP`.
+
+`e-ORP` assumes that 85% of Social Security benefits are taxed regardless of your "provisional income" level.
+
+`e-ORP` does not handle Net Investment Income Taxes (NIIT). The NIIT applies at a rate of 3.8% to certain net 
+investment income of individuals, estates and trusts that have income above the statutory threshold amounts.
+This MAGI threshold is $250,000 for married filing jointly, $200,000 for single, and $200,000 for head of household.
+These threshold amounts are not indexed for inflation. You pay the NIIT based on the lesser of your net investment 
+income or the amount by which your MAGI surpasses the filing status-based threshold. Investment income includes
+interest, capital gains, dividends, rental and royalty income; excludes wages, social security, pensions.
+
+See [Limits](https://github.com/dcurrie/e-ORP/blob/main/doc/Internals.md#limits)
+
+TODO more implicit assumptions
 
 ## Data Flow
 
