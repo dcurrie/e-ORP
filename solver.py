@@ -112,9 +112,7 @@ def oorplp(dd, mode, objective, tout, glim):
     no_capgains_constraints = (mode == 0) or (mode == 2) or (mode == 3)
     no_capital_losses = (mode == 0) or (mode == 1) or (mode == 3)
     #
-    #err_out.clear_output() # at start of each run
-    drb_out.clear_output() # at start of each run
-    # ? out_box.clear_output()
+    # (no widget output in desktop app; stdout is redirected by worker)
     # config values from UI
     def rori_r(y):
         return 1.0 + (dd['ror_stock'][y] * dd['frac_stock_r'][y] + dd['ror_bonds'][y] * dd['frac_bonds_r'][y])
