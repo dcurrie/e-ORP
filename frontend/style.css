@@ -1,0 +1,157 @@
+/* e-ORP frontend — Stage 4 full form and results */
+* { box-sizing: border-box; }
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+}
+header {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #ccc;
+  background: #f8f8f8;
+}
+header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #228b22;
+}
+
+#main-layout {
+  display: flex;
+  min-height: calc(100vh - 3rem);
+}
+.inputs-panel {
+  width: 42%;
+  min-width: 320px;
+  max-width: 520px;
+  overflow-y: auto;
+  padding: 0.75rem 1rem;
+  border-right: 1px solid #ccc;
+  background: #fafafa;
+}
+#right-column {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem 1rem;
+  min-width: 0;
+}
+
+.panel {
+  margin-bottom: 1rem;
+}
+.panel h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.panel h3 {
+  margin: 1rem 0 0.4rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.panel h3:first-of-type { margin-top: 0.5rem; }
+
+.note {
+  font-style: italic;
+  color: #555;
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+/* Form grids */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 38% 1fr;
+  gap: 0.35rem 0.75rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.grid-2 label { justify-self: end; }
+.grid-2 input, .grid-2 select { max-width: 12rem; }
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 5rem 5rem;
+  gap: 0.35rem 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.grid-3 .center { text-align: center; font-weight: 500; font-size: 0.9rem; }
+.grid-3 label { grid-column: 1; }
+.grid-3 input, .grid-3 select { max-width: 100%; }
+
+.inline-3 {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+.inline-3 input { width: 3.5rem; }
+
+.phases-grid {
+  display: grid;
+  grid-template-columns: 2rem 4rem 5rem 4rem 1fr;
+  gap: 0.25rem 0.5rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+.phases-grid .ph-label { font-weight: 500; }
+.phases-grid input[type="text"] { min-width: 0; }
+
+input[type="number"], input[type="text"], select, textarea {
+  padding: 0.25rem 0.4rem;
+  font-size: inherit;
+}
+button {
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  font-size: inherit;
+  margin-right: 0.5rem;
+  margin-top: 0.25rem;
+}
+#run-btn {
+  padding: 0.5rem 1.25rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+#run-btn:disabled { cursor: not-allowed; opacity: 0.8; }
+
+#scip-log {
+  background: #f0f0f0;
+  padding: 0.5rem;
+  max-height: 140px;
+  overflow: auto;
+  font-size: 0.8rem;
+  font-family: ui-monospace, monospace;
+  white-space: pre-wrap;
+  margin: 0;
+  border: 1px solid #ddd;
+}
+
+.warning {
+  color: #c00;
+  margin: 0.25rem 0;
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+}
+
+#results-panel .chart {
+  margin: 1rem 0;
+  min-height: 280px;
+}
+#results-panel .table-wrapper {
+  overflow-x: auto;
+  margin: 0.5rem 0 1rem 0;
+}
+#results-panel .table-wrapper table {
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+#results-panel .table-wrapper th,
+#results-panel .table-wrapper td {
+  border: 1px solid #ccc;
+  padding: 0.25rem 0.5rem;
+  text-align: right;
+}
+#results-panel .table-wrapper th { background: #eee; }
+#results-panel h3 { margin-top: 1.25rem; }

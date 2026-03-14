@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>e-ORP — Optimal Retirement Planner</title>
+  <script src="plotly.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><h1>e-ORP — Optimal Retirement Planner</h1></header>
+
+  <div id="main-layout">
+    <aside id="inputs-panel" class="panel inputs-panel">
+      <h2>Set Model Parameters</h2>
+      <p class="note">All dollar values in 000s.</p>
+
+      <div class="grid-2">
+        <label for="byear">Base year (account values at end of)</label>
+        <input type="number" id="byear" data-param="byear" min="1900" max="2100" value="2024">
+        <label for="ftab">Plan Surplus / Final Total Account Balance</label>
+        <input type="number" id="ftab" data-param="ftab" min="0" step="0.1" value="0">
+      </div>
+
+      <h3>Person / Spouse</h3>
+      <div class="grid-3">
+        <span></span><span class="center">Person</span><span class="center">Spouse</span>
+        <label>Age at end of base year</label>
+        <input type="number" id="aage1" data-param="aage1" min="0" max="120" value="65">
+        <input type="number" id="aage2" data-param="aage2" min="0" max="120" value="65">
+        <label>Age at planning horizon</label>
+        <input type="number" id="fage1" data-param="fage1" min="0" max="120" value="92">
+        <input type="number" id="fage2" data-param="fage2" min="0" max="120" value="92">
+      </div>
+
+      <h3>Asset Values</h3>
+      <div class="grid-3">
+        <span></span><span class="center">Person</span><span class="center">Spouse</span>
+        <label>Non-retirement accounts</label>
+        <input type="number" id="atax1" data-param="atax1" min="0" step="0.1" value="50">
+        <input type="number" id="atax2" data-param="atax2" min="0" step="0.1" value="50">
+        <label>Cost basis of above</label>
+        <input type="number" id="bsis1" data-param="bsis1" min="0" step="0.1" value="10">
+        <input type="number" id="bsis2" data-param="bsis2" min="0" step="0.1" value="10">
+        <label>Tax-deferred IRAs / 401(k)s</label>
+        <input type="number" id="taxd1" data-param="taxd1" min="0" step="0.1" value="100">
+        <input type="number" id="taxd2" data-param="taxd2" min="0" step="0.1" value="100">
+        <label>Roth IRAs / 401(k)s</label>
+        <input type="number" id="roth1" data-param="roth1" min="0" step="0.1" value="100">
+        <input type="number" id="roth2" data-param="roth2" min="0" step="0.1" value="100">
+      </div>
+
+      <h3>Social Security</h3>
+      <div class="grid-3">
+        <span></span><span class="center">Person</span><span class="center">Spouse</span>
+        <label>SS income, annual</label>
+        <input type="number" id="ssar1" data-param="ssar1" min="0" step="0.1" value="36">
+        <input type="number" id="ssar2" data-param="ssar2" min="0" step="0.1" value="36">
+        <label>Reference age of SS income</label>
+        <input type="number" id="refa1" data-param="refa1" min="0" max="120" value="65">
+        <input type="number" id="refa2" data-param="refa2" min="0" max="120" value="65">
+        <label>Age when SS claimed</label>
+        <input type="number" id="reta1" data-param="reta1" min="0" max="120" value="70">
+        <input type="number" id="reta2" data-param="reta2" min="0" max="120" value="65">
+      </div>
+
+      <h3>Pensions</h3>
+      <div class="grid-3">
+        <span></span><span class="center">Person</span><span class="center">Spouse</span>
+        <label>Pension / annuity type</label>
+        <select id="popt1" data-param="popt1"><option value="0">Fixed</option><option value="1">COLA</option><option value="2">Lump Sum</option></select>
+        <select id="popt2" data-param="popt2"><option value="0">Fixed</option><option value="1">COLA</option><option value="2">Lump Sum</option></select>
+        <label>Annual payment (or lump total)</label>
+        <input type="number" id="pens1" data-param="pens1" min="0" step="0.1" value="0">
+        <input type="number" id="pens2" data-param="pens2" min="0" step="0.1" value="0">
+        <label>Age when claimed</label>
+        <input type="number" id="page1" data-param="page1" min="0" max="120" value="65">
+        <input type="number" id="page2" data-param="page2" min="0" max="120" value="65">
+        <label>% for surviving spouse</label>
+        <input type="number" id="pinh1" data-param="pinh1" min="0" step="0.1" value="0">
+        <input type="number" id="pinh2" data-param="pinh2" min="0" step="0.1" value="0">
+      </div>
+
+      <h3>Other Income</h3>
+      <div class="grid-2">
+        <label for="xinc">Misc. annual income</label>
+        <input type="number" id="xinc" data-param="xinc" min="0" step="0.1" value="1">
+        <label for="xinr">Rate of change (+/-) %</label>
+        <input type="number" id="xinr" data-param="xinr" min="-100" step="0.1" value="0">
+      </div>
+
+      <h3>Spending Model</h3>
+      <div class="grid-2">
+        <label for="infs">Inflation rate for spending, %</label>
+        <input type="number" id="infs" data-param="infs" min="0" step="0.1" value="4">
+        <label for="incn">Annual disposable income (spending)</label>
+        <input type="number" id="incn" data-param="incn" min="0" step="0.1" value="50">
+        <label for="spndm">Spending model</label>
+        <select id="spndm" data-param="spndm"><option value="0">Traditional (TSM)</option><option value="1">Changing Consumption</option></select>
+      </div>
+
+      <h3>Phases of Retirement (extraordinary expenses)</h3>
+      <div class="phases-grid">
+        <span class="ph-label">Phase</span><span>Year</span><span>Type</span><span>Value</span><span>Note</span>
+        <span class="ph-label">1</span><input type="number" id="yr01" data-param="yr01" min="2000" max="2100" value="2025">
+        <select id="pr01" data-param="pr01"><option value="0">One-time</option><option value="1">Recurring</option></select>
+        <input type="number" id="va01" data-param="va01" min="0" step="0.1" value="0">
+        <input type="text" id="tx01" data-param="tx01" placeholder="note">
+        <span class="ph-label">2</span><input type="number" id="yr02" data-param="yr02" min="2000" max="2100" value="2025">
+        <select id="pr02" data-param="pr02"><option value="0">One-time</option><option value="1">Recurring</option></select>
+        <input type="number" id="va02" data-param="va02" min="0" step="0.1" value="0">
+        <input type="text" id="tx02" data-param="tx02" placeholder="note">
+        <span class="ph-label">3</span><input type="number" id="yr03" data-param="yr03" min="2000" max="2100" value="2025">
+        <select id="pr03" data-param="pr03"><option value="0">One-time</option><option value="1">Recurring</option></select>
+        <input type="number" id="va03" data-param="va03" min="0" step="0.1" value="0">
+        <input type="text" id="tx03" data-param="tx03" placeholder="note">
+        <span class="ph-label">4</span><input type="number" id="yr04" data-param="yr04" min="2000" max="2100" value="2025">
+        <select id="pr04" data-param="pr04"><option value="0">One-time</option><option value="1">Recurring</option></select>
+        <input type="number" id="va04" data-param="va04" min="0" step="0.1" value="0">
+        <input type="text" id="tx04" data-param="tx04" placeholder="note">
+        <span class="ph-label">5</span><input type="number" id="yr05" data-param="yr05" min="2000" max="2100" value="2025">
+        <select id="pr05" data-param="pr05"><option value="0">One-time</option><option value="1">Recurring</option></select>
+        <input type="number" id="va05" data-param="va05" min="0" step="0.1" value="0">
+        <input type="text" id="tx05" data-param="tx05" placeholder="note">
+        <span class="ph-label">6</span><input type="number" id="yr06" data-param="yr06" min="2000" max="2100" value="2025">
+        <select id="pr06" data-param="pr06"><option value="0">One-time</option><option value="1">Recurring</option></select>
+        <input type="number" id="va06" data-param="va06" min="0" step="0.1" value="0">
+        <input type="text" id="tx06" data-param="tx06" placeholder="note">
+        <span class="ph-label">7</span><input type="number" id="yr07" data-param="yr07" min="2000" max="2100" value="2025">
+        <select id="pr07" data-param="pr07"><option value="0">One-time</option><option value="1">Recurring</option></select>
+        <input type="number" id="va07" data-param="va07" min="0" step="0.1" value="0">
+        <input type="text" id="tx07" data-param="tx07" placeholder="note">
+        <span class="ph-label">8</span><input type="number" id="yr08" data-param="yr08" min="2000" max="2100" value="2025">
+        <select id="pr08" data-param="pr08"><option value="0">One-time</option><option value="1">Recurring</option></select>
+        <input type="number" id="va08" data-param="va08" min="0" step="0.1" value="0">
+        <input type="text" id="tx08" data-param="tx08" placeholder="note">
+      </div>
+
+      <h3>Asset Allocation & Glide Path</h3>
+      <div class="grid-2">
+        <label>Stock %, base year (taxable / tax-deferred / Roth)</label>
+        <span class="inline-3">
+          <input type="number" id="frasa" data-param="frasa" min="0" max="100" step="0.1" value="60" title="taxable">
+          <input type="number" id="frasr" data-param="frasr" min="0" max="100" step="0.1" value="60" title="tax-deferred">
+          <input type="number" id="frasd" data-param="frasd" min="0" max="100" step="0.1" value="60" title="Roth">
+        </span>
+        <label>Bond %, base year</label>
+        <span class="inline-3">
+          <input type="number" id="fraba" data-param="fraba" min="0" max="100" step="0.1" value="40">
+          <input type="number" id="frabr" data-param="frabr" min="0" max="100" step="0.1" value="40">
+          <input type="number" id="frabd" data-param="frabd" min="0" max="100" step="0.1" value="40">
+        </span>
+        <label for="glide">Glide path</label>
+        <select id="glide" data-param="glide"><option value="0">Disabled</option><option value="1">Enabled</option></select>
+        <label>Stock %, horizon year</label>
+        <span class="inline-3">
+          <input type="number" id="frhsa" data-param="frhsa" min="0" max="100" step="0.1" value="60" disabled>
+          <input type="number" id="frhsr" data-param="frhsr" min="0" max="100" step="0.1" value="60" disabled>
+          <input type="number" id="frhsd" data-param="frhsd" min="0" max="100" step="0.1" value="60" disabled>
+        </span>
+        <label>Bond %, horizon year</label>
+        <span class="inline-3">
+          <input type="number" id="frhba" data-param="frhba" min="0" max="100" step="0.1" value="40" disabled>
+          <input type="number" id="frhbr" data-param="frhbr" min="0" max="100" step="0.1" value="40" disabled>
+          <input type="number" id="frhbd" data-param="frhbd" min="0" max="100" step="0.1" value="40" disabled>
+        </span>
+      </div>
+
+      <h3>Rates</h3>
+      <div class="grid-2">
+        <label for="infl">Inflation (SSA & tax brackets), %</label>
+        <input type="number" id="infl" data-param="infl" min="0" step="0.1" value="2">
+        <label for="hist">Historical year for rates (or Use Values Below)</label>
+        <select id="hist" data-param="hist"><option value="Use Values Below">Use Values Below</option></select>
+        <label for="rorb">Bond return, %</label>
+        <input type="number" id="rorb" data-param="rorb" min="-100" step="0.01" value="3">
+        <label for="rors">Stock return, %</label>
+        <input type="number" id="rors" data-param="rors" min="-100" step="0.01" value="7">
+        <label for="dvdd">Dividend rate (stock), %</label>
+        <input type="number" id="dvdd" data-param="dvdd" min="0" step="0.01" value="3.26">
+      </div>
+
+      <h3>Taxes</h3>
+      <div class="grid-2">
+        <label for="magib">MAGI base year</label>
+        <input type="number" id="magib" data-param="magib" min="0" step="0.1" value="42">
+        <label for="magip">MAGI prior year (IRMAA)</label>
+        <input type="number" id="magip" data-param="magip" min="0" step="0.1" value="40">
+        <label for="chty">Charitable (QCD), $</label>
+        <input type="number" id="chty" data-param="chty" min="0" step="0.1" value="0">
+        <label for="fstat">Filing status</label>
+        <select id="fstat" data-param="fstat"><option value="0">Single</option><option value="1">Married Filing Jointly</option><option value="2">Head of Household</option></select>
+      </div>
+
+      <h3>Modeling</h3>
+      <div class="grid-2">
+        <label for="ssabr">SSA benefits</label>
+        <select id="ssabr" data-param="ssabr"><option value="0">maintained at current levels</option><option value="1">reduced 23% in 2034</option></select>
+        <label for="rothl">Roth conversion limit</label>
+        <select id="rothl" data-param="rothl">
+          <option value="tax0">None</option>
+          <option value="tax1">Limit: 0% bracket</option>
+          <option value="tax2">Limit: 10% bracket</option>
+          <option value="tax3">Limit: 12% bracket</option>
+          <option value="tax4">Limit: 22% bracket</option>
+          <option value="tax5">Limit: 24% bracket</option>
+          <option value="tax6">Limit: 32% bracket</option>
+          <option value="tax7">Limit: 35% bracket</option>
+          <option value="unlimited" selected>Unlimited</option>
+        </select>
+      </div>
+
+      <h3>Parameter Save & Load</h3>
+      <div class="grid-2">
+        <label for="pfname">File path</label>
+        <input type="text" id="pfname" placeholder="path to .csv">
+        <span></span>
+        <button type="button" id="save-btn">Save</button>
+        <button type="button" id="load-btn">Load</button>
+      </div>
+      <div class="grid-2">
+        <label for="param-buf">Clipboard (CSV)</label>
+        <textarea id="param-buf" rows="4" placeholder="Paste CSV here or copy to clipboard"></textarea>
+        <span></span>
+        <button type="button" id="copy-btn">Copy params</button>
+        <button type="button" id="paste-btn">Paste params</button>
+      </div>
+    </aside>
+
+    <div id="right-column">
+      <section id="controls-panel" class="panel">
+        <h2>Optimizer Controls</h2>
+        <div class="grid-2">
+          <label for="nlpomode">NLP/MIP mode</label>
+          <select id="nlpomode">
+            <option value="0">Normal (fastest)</option>
+            <option value="1">No capital losses</option>
+            <option value="2">No capgains basis averaging</option>
+            <option value="3">Neither</option>
+            <option value="4">Full MINLP</option>
+          </select>
+          <label for="efname">Export CSV path</label>
+          <input type="text" id="efname" value="" placeholder="optional">
+        </div>
+        <div class="grid-2">
+          <label for="testmode">Test mode</label>
+          <select id="testmode">
+            <option value="0">Normal</option>
+            <option value="1">Test losses</option>
+            <option value="2">Net pretax</option>
+            <option value="3">3-peat</option>
+            <option value="4">Walk</option>
+          </select>
+          <label for="tout">Timeout (s)</label>
+          <input type="number" id="tout" value="60" min="1">
+          <label for="glim">Gap limit</label>
+          <input type="number" id="glim" value="0" step="0.01">
+        </div>
+        <button type="button" id="run-btn">Run Projection</button>
+      </section>
+
+      <section id="warnings-panel" class="panel">
+        <h2>Warnings</h2>
+        <div id="warnings"></div>
+      </section>
+
+      <section id="scip-log-panel" class="panel">
+        <h2>SCIP log</h2>
+        <pre id="scip-log"></pre>
+      </section>
+
+      <section id="results-panel" class="panel">
+        <h2>Results</h2>
+        <div id="results"></div>
+      </section>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
