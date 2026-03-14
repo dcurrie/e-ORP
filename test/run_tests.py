@@ -9,7 +9,7 @@ os.chdir(repo_root)
 python = sys.executable
 
 failed = []
-for name in ('test_planner', 'test_backend'):
+for name in ('test_planner', 'test_backend', 'test_frontend_api_adapter'):
     path = os.path.join('test', name + '.py')
     r = subprocess.run([python, path], cwd=repo_root)
     if r.returncode != 0:

@@ -31,9 +31,13 @@ To open developer tools (e.g. to inspect the WebView console):
 python main.py --debug
 ```
 
+## Cross-platform bridge (snake_case vs camelCase)
+
+The frontend always uses **snake_case** for API calls (e.g. `set_params`, `run_projection`). On macOS (Cocoa/WebKit) the bridge may expose methods in snake_case; on Windows and Linux pywebview typically exposes **camelCase** (e.g. `setParams`, `runProjection`). The app uses a small adapter in `frontend/app.js` (`normalizeApi`) so that either style works: `getApi()` returns an object whose snake_case methods map to the backend’s snake_case or camelCase. No platform-specific code is needed in the rest of the app.
+
 ## macOS (Cocoa)
 
-On macOS, pywebview uses the Cocoa/WebKit backend. The bridge exposes Python API methods in **snake_case** (e.g. `set_params`, `run_projection`). There is a known issue where the bridge’s internal `pywebview.stringify` is not available in the WebKit context; the app works around this by replacing the Cocoa branch of `_jsApiCallback` so it uses `window.pywebview.stringify` or `JSON.stringify` (see comment in `frontend/index.html` and `frontend/app.js`).
+On macOS, pywebview uses the Cocoa/WebKit backend. There is a known issue where the bridge’s internal `pywebview.stringify` is not available in the WebKit context; the app works around this by replacing the Cocoa branch of `_jsApiCallback` so it uses `window.pywebview.stringify` or `JSON.stringify` (see comment in `frontend/index.html` and `frontend/app.js`).
 
 ## Quick verification (Load / Run / Save)
 
@@ -61,5 +65,8 @@ Or run each module separately:
 
 - **test_planner.py** — planner datadict and a short solver run (oorp).
 - **test_backend.py** — API param CSV round-trip (clipboard, file, and relative path like `params/file.csv`).
+- **test_frontend_api_adapter.py** — cross-platform bridge adapter (snake_case vs camelCase).
+
+Optional: with Node installed, `node test/frontend_api_adapter_test.js` runs the same adapter logic in JS.
 
 All tests should pass; the solver test may take a few seconds.

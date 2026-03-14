@@ -104,8 +104,27 @@ function runFinished() {
   }
 }
 
+// Bridge method names: Cocoa may expose snake_case; other backends (Windows/Linux) use camelCase.
+// Normalize so app code can always use snake_case.
+function normalizeApi(raw) {
+  if (!raw) return null;
+  return {
+    ping: raw.ping,
+    get_params: raw.get_params || raw.getParams,
+    set_params: raw.set_params || raw.setParams,
+    save_params: raw.save_params || raw.saveParams,
+    load_params: raw.load_params || raw.loadParams,
+    get_params_csv: raw.get_params_csv || raw.getParamsCsv,
+    load_params_from_csv: raw.load_params_from_csv || raw.loadParamsFromCsv,
+    get_hist_options: raw.get_hist_options || raw.getHistOptions,
+    run_projection: raw.run_projection || raw.runProjection,
+    poll_log: raw.poll_log || raw.pollLog
+  };
+}
+
 function getApi() {
-  return (window.pywebview && window.pywebview.api) || pywebview;
+  const raw = (window.pywebview && window.pywebview.api) || pywebview;
+  return raw ? normalizeApi(raw) : null;
 }
 
 function onRun() {
@@ -218,13 +237,14 @@ function initBridge() {
       };
     }
   }
-  const api = (typeof pywebview !== 'undefined' && pywebview && pywebview.api)
+  const raw = (typeof pywebview !== 'undefined' && pywebview && pywebview.api)
     ? pywebview.api
     : (window.pywebview && window.pywebview.api);
-  if (!api) return false;
-  pywebview = api;
+  if (!raw) return false;
+  pywebview = raw;
   setBridgeStatus('Ready', 'ready');
 
+  const api = getApi();
   api.get_hist_options().then(opts => {
     const sel = document.getElementById('hist');
     const first = sel.options[0];
