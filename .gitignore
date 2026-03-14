@@ -6,3 +6,4 @@ __pycache__/
 scratch/
 params/_*
 data/_*
+frontend/plotly.min.js

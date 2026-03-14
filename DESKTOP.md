@@ -17,7 +17,11 @@ python main.py
 ## Requirements
 
 - Python 3 with packages in `requirements.txt`: `pandas`, `plotly`, `pyscipopt`, `pywebview`
-- Create venv: `python -m venv .venv && .venv/bin/pip install -r requirements.txt`
+- **Plotly.js** (frontend): `frontend/plotly.min.js` is not in the repo. Use **tested version 3.0.1**. Either run `make desktop` (see below) to fetch it, or download manually:
+  - Minified: https://cdn.plot.ly/plotly-3.0.1.min.js → save as `frontend/plotly.min.js`
+  - Or from GitHub: https://github.com/plotly/plotly.js/releases/tag/v3.0.1
+
+To set up everything (venv + Plotly.js): from the project root run `make desktop`. Or create venv and fetch Plotly.js yourself: `python -m venv ORPy-venv && ORPy-venv/bin/pip install -r requirements.txt`, then download `plotly-3.0.1.min.js` to `frontend/plotly.min.js`.
 
 ## Debug mode
 
