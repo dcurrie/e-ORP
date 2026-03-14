@@ -581,6 +581,8 @@ def oorplp(dd, mode, objective, tout, glim):
             dd['to_aTax_unrlz'][y] = lop_to_cents_signed(scip.getVal(vars['to_aTax_unrlz'][y]))
             
             dd['tax_bracket'][y] = \
+                0.37 if lop_to_cents(scip.getVal(vars['tax7'][y])) != 0 else \
+                0.35 if lop_to_cents(scip.getVal(vars['tax6'][y])) != 0 else \
                 0.32 if lop_to_cents(scip.getVal(vars['tax5'][y])) != 0 else \
                 0.24 if lop_to_cents(scip.getVal(vars['tax4'][y])) != 0 else \
                 0.22 if lop_to_cents(scip.getVal(vars['tax3'][y])) != 0 else \
@@ -664,10 +666,13 @@ def walk_lap(p, fromyear, mode, tout, glim, warn_cb=None):
 
 def walk(p, mode, tout, glim, fname, warn_cb=None):
     worst_di = 1000000.0
+    worst_di_dd = None
+    worst_year = 1970
     sta_yr = 1970
     nyears = 10
     if p.get('hist') != 'Use Values Below':
         sta_yr = int(p['hist'])
+    worst_year = sta_yr
     for y in range(sta_yr, sta_yr + nyears):
         (dd, status, net_pretax, di, stage, gap, stime) = walk_lap(p, y, mode, tout, glim, warn_cb=warn_cb)
         if status in ('timelimit', 'optimal', 'gaplimit'):
@@ -678,6 +683,9 @@ def walk(p, mode, tout, glim, fname, warn_cb=None):
                 worst_year = y
         else:
             print(f'{y} | Optimization failed, status {status} gap {100 * gap: 1.3f}% in {stime: 2.3f} s')
+            if worst_di_dd is None:
+                worst_di_dd = dd
+                worst_year = y
     print(f'{worst_year} | DI 1st year: {worst_di: 3.3f} is lowest...')
     return (worst_di_dd, worst_year, worst_di, fname)
 
