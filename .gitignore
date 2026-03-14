@@ -1,6 +1,8 @@
 .DS_Store
 .ipynb_checkpoints/
 .venv-stage5/
+__pycache__/
+*.pyc
 scratch/
 params/_*
 data/_*
