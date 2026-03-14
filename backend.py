@@ -62,6 +62,10 @@ class Api:
     def _coerce_types(self, d):
         return {k: self._coerce_one(k, v) for k, v in d.items()}
 
+    def ping(self):
+        """Return a string so the frontend can verify the bridge round-trip (e.g. on Cocoa)."""
+        return 'pong'
+
     def get_params(self):
         return self.params
 

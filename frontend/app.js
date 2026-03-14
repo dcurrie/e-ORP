@@ -51,8 +51,9 @@ function updateGlidePath() {
 function startLogPolling() {
   if (logInterval) clearInterval(logInterval);
   logInterval = setInterval(() => {
-    if (!pywebview) return;
-    pywebview.pollLog().then(text => {
+    const api = getApi();
+    if (!api) return;
+    api.poll_log().then(text => {
       if (text) {
         const pre = document.getElementById('scip-log');
         pre.textContent += text;
@@ -102,7 +103,13 @@ function runFinished() {
   }
 }
 
+function getApi() {
+  return (window.pywebview && window.pywebview.api) || pywebview;
+}
+
 function onRun() {
+  const api = getApi();
+  if (!api) { appendWarning('Run: bridge not available'); return; }
   const btn = document.getElementById('run-btn');
   if (btn) {
     btn.disabled = true;
@@ -118,44 +125,56 @@ function onRun() {
   const glim = parseFloat(document.getElementById('glim').value) || 0;
   const efname = (document.getElementById('efname') && document.getElementById('efname').value) || '';
 
-  pywebview.setParams(collectParams());
-  pywebview.runProjection(mode, testmode, tout, glim, efname);
+  try {
+    api.set_params(collectParams());
+    var p = api.run_projection(mode, testmode, tout, glim, efname);
+    if (p && typeof p.then === 'function') {
+      p.catch(function (e) { appendWarning('Run failed: ' + (e && (e.message || e.toString()))); runFinished(); });
+    }
+  } catch (e) {
+    appendWarning('Run error: ' + (e && (e.message || e.toString())));
+    runFinished();
+  }
 }
 
 // Attach Save/Load/Copy/Paste on DOM ready so they work even if pywebviewready fires late or fails
 function onSaveClick() {
-  if (!pywebview) { appendWarning('App not ready.'); return; }
+  const api = getApi();
+  if (!api) { appendWarning('Save: App not ready.'); return; }
   const pathEl = document.getElementById('pfname');
   const path = pathEl ? pathEl.value : '';
-  pywebview.setParams(collectParams());
-  pywebview.saveParams(path).then(result => {
+  api.set_params(collectParams());
+  api.save_params(path).then(result => {
     if (result && result.error) appendWarning('Save: ' + result.error);
   }).catch(e => appendWarning('Save failed: ' + (e.message || String(e))));
 }
 
 function onLoadClick() {
-  if (!pywebview) { appendWarning('App not ready.'); return; }
+  const api = getApi();
+  if (!api) { appendWarning('Load: App not ready.'); return; }
   const pathEl = document.getElementById('pfname');
   const path = pathEl ? pathEl.value : '';
-  pywebview.loadParams(path).then(params => {
+  api.load_params(path).then(params => {
     populateForm(params);
   }).catch(e => appendWarning('Load failed: ' + (e.message || String(e))));
 }
 
 function onCopyClick() {
-  if (!pywebview) { appendWarning('App not ready.'); return; }
-  pywebview.setParams(collectParams());
-  pywebview.getParamsCsv().then(csv => {
+  const api = getApi();
+  if (!api) { appendWarning('Copy: App not ready.'); return; }
+  api.set_params(collectParams());
+  api.get_params_csv().then(csv => {
     const el = document.getElementById('param-buf');
     if (el) el.value = csv;
   }).catch(e => appendWarning('Copy failed: ' + (e.message || String(e))));
 }
 
 function onPasteClick() {
-  if (!pywebview) { appendWarning('App not ready.'); return; }
+  const api = getApi();
+  if (!api) { appendWarning('Paste: App not ready.'); return; }
   const el = document.getElementById('param-buf');
   const text = el ? el.value : '';
-  pywebview.loadParamsFromCsv(text).then(params => {
+  api.load_params_from_csv(text).then(params => {
     populateForm(params);
   }).catch(e => appendWarning('Paste failed: ' + (e.message || String(e))));
 }
@@ -165,10 +184,12 @@ function attachParamButtons() {
   const loadBtn = document.getElementById('load-btn');
   const copyBtn = document.getElementById('copy-btn');
   const pasteBtn = document.getElementById('paste-btn');
+  const runBtn = document.getElementById('run-btn');
   if (saveBtn) saveBtn.addEventListener('click', onSaveClick);
   if (loadBtn) loadBtn.addEventListener('click', onLoadClick);
   if (copyBtn) copyBtn.addEventListener('click', onCopyClick);
   if (pasteBtn) pasteBtn.addEventListener('click', onPasteClick);
+  if (runBtn) runBtn.addEventListener('click', onRun);
 }
 
 if (document.readyState === 'loading') {
@@ -177,14 +198,33 @@ if (document.readyState === 'loading') {
   attachParamButtons();
 }
 
+function setBridgeStatus(msg, className) {
+  const el = document.getElementById('bridge-status');
+  if (el) { el.textContent = msg; el.className = 'bridge-status ' + (className || ''); }
+}
+
 function initBridge() {
+  /* Cocoa: ensure _jsApiCallback uses our stringify (see index.html head script). */
+  if (window.pywebview && window.pywebview.platform === 'cocoa') {
+    var stringify = (typeof window.pywebview.stringify === 'function')
+      ? window.pywebview.stringify.bind(window.pywebview)
+      : function(obj) { return JSON.stringify(obj); };
+    var orig = window.pywebview._jsApiCallback;
+    if (typeof orig === 'function') {
+      window.pywebview._jsApiCallback = function(funcName, params, id) {
+        var payload = stringify({ funcName: funcName, params: params, id: id });
+        return window.webkit.messageHandlers.jsBridge.postMessage(payload);
+      };
+    }
+  }
   const api = (typeof pywebview !== 'undefined' && pywebview && pywebview.api)
     ? pywebview.api
     : (window.pywebview && window.pywebview.api);
   if (!api) return false;
   pywebview = api;
+  setBridgeStatus('Ready', 'ready');
 
-  api.getHistOptions().then(opts => {
+  api.get_hist_options().then(opts => {
     const sel = document.getElementById('hist');
     const first = sel.options[0];
     sel.innerHTML = '';
@@ -195,10 +235,11 @@ function initBridge() {
       o.textContent = String(y);
       sel.appendChild(o);
     }
-    return api.getParams();
+    return api.get_params();
   }).then(params => {
     populateForm(params);
   }).catch(e => {
+    setBridgeStatus('Startup error — see Warnings', 'failed');
     appendWarning('Startup: ' + (e.message || String(e)));
   });
 
@@ -206,17 +247,25 @@ function initBridge() {
   if (glideEl) glideEl.addEventListener('change', updateGlidePath);
 
   startLogPolling();
-
-  const runBtn = document.getElementById('run-btn');
-  if (runBtn) runBtn.addEventListener('click', onRun);
   return true;
 }
 
 window.addEventListener('pywebviewready', () => { initBridge(); });
 
-// Fallback: if pywebviewready never fires (e.g. file:// or older build), poll for API
+if (window.__eorpBridgeReadyFired) {
+  initBridge();
+}
+
+// Fallback: if pywebviewready never fires, poll for API (e.g. late injection on Cocoa)
+var pollCount = 0;
+var pollMax = 150;
 setTimeout(function poll() {
   if (pywebview) return;
   if (initBridge()) return;
-  setTimeout(poll, 100);
-}, 500);
+  pollCount++;
+  if (pollCount >= pollMax) {
+    setBridgeStatus('Bridge not available — run from project dir: cd path/to/e-ORP && python main.py', 'failed');
+    return;
+  }
+  setTimeout(poll, 80);
+}, 100);

@@ -40,7 +40,29 @@ def test_params_file_roundtrip():
         os.unlink(path)
 
 
+def test_params_relative_path_load_save():
+    """Load/save using relative path (e.g. params/file.csv) resolved against app dir."""
+    api = Api()
+    api.params['byear'] = 2028
+    api.params['rorb'] = 2.0
+    rel_path = os.path.join('params', 'test_desktop_save.csv')
+    app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    abs_path = os.path.join(app_dir, rel_path)
+    try:
+        api.save_params(rel_path)
+        assert os.path.isfile(abs_path), abs_path
+        api2 = Api()
+        api2.load_params(rel_path)
+        assert api2.params['byear'] == 2028
+        assert api2.params['rorb'] == 2.0
+        print("test_params_relative_path_load_save: OK")
+    finally:
+        if os.path.isfile(abs_path):
+            os.unlink(abs_path)
+
+
 if __name__ == '__main__':
     test_params_csv_roundtrip()
     test_params_file_roundtrip()
+    test_params_relative_path_load_save()
     print("All backend tests passed.")

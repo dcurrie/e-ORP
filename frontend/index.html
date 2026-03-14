@@ -4,81 +4,118 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>e-ORP — Optimal Retirement Planner</title>
+  <script>
+    /* Cocoa workaround: pywebview's bridge uses global pywebview.stringify which is undefined on WebKit. Replace _jsApiCallback for cocoa so we stringify ourselves. */
+    window.__eorpBridgeReadyFired = false;
+    window.addEventListener('pywebviewready', function() {
+      window.__eorpBridgeReadyFired = true;
+      if (window.pywebview && window.pywebview.platform === 'cocoa') {
+        var stringify = (typeof window.pywebview.stringify === 'function')
+          ? window.pywebview.stringify.bind(window.pywebview)
+          : function(obj) { return JSON.stringify(obj); };
+        var orig = window.pywebview._jsApiCallback;
+        if (typeof orig === 'function') {
+          window.pywebview._jsApiCallback = function(funcName, params, id) {
+            var payload = stringify({ funcName: funcName, params: params, id: id });
+            return window.webkit.messageHandlers.jsBridge.postMessage(payload);
+          };
+        }
+      }
+    });
+  </script>
   <script src="plotly.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header><h1>e-ORP — Optimal Retirement Planner</h1></header>
+  <header>
+    <h1>e-ORP — Optimal Retirement Planner</h1>
+    <p id="bridge-status" class="bridge-status">Connecting…</p>
+  </header>
 
   <div id="main-layout">
-    <aside id="inputs-panel" class="panel inputs-panel">
+    <section id="form-section" class="panel form-section">
       <h2>Set Model Parameters</h2>
-      <p class="note">All dollar values in 000s.</p>
+      <p class="note">Note: All dollar values in 000s.</p>
 
-      <div class="grid-2">
-        <label for="byear">Base year (account values at end of)</label>
+      <div class="grid-2-with-explain">
+        <label for="byear">Base Year</label>
         <input type="number" id="byear" data-param="byear" min="1900" max="2100" value="2024">
-        <label for="ftab">Plan Surplus / Final Total Account Balance</label>
+        <span class="explain">Account values below are at the end of the Base Year.</span>
+        <label for="ftab">Plan Surplus</label>
         <input type="number" id="ftab" data-param="ftab" min="0" step="0.1" value="0">
+        <span class="explain">The Plan Surplus, or Final Total Account Balance.</span>
       </div>
 
       <h3>Person / Spouse</h3>
-      <div class="grid-3">
-        <span></span><span class="center">Person</span><span class="center">Spouse</span>
-        <label>Age at end of base year</label>
+      <div class="grid-4">
+        <span></span><span class="center">Person</span><span class="center">Spouse</span><span></span>
+        <label>Age</label>
         <input type="number" id="aage1" data-param="aage1" min="0" max="120" value="65">
         <input type="number" id="aage2" data-param="aage2" min="0" max="120" value="65">
-        <label>Age at planning horizon</label>
+        <span class="explain">Age at end of base year.</span>
+        <label>Age @ Horizon</label>
         <input type="number" id="fage1" data-param="fage1" min="0" max="120" value="92">
         <input type="number" id="fage2" data-param="fage2" min="0" max="120" value="92">
+        <span class="explain">Age at the Planning Horizon.</span>
       </div>
 
       <h3>Asset Values</h3>
-      <div class="grid-3">
-        <span></span><span class="center">Person</span><span class="center">Spouse</span>
-        <label>Non-retirement accounts</label>
+      <div class="grid-4">
+        <span></span><span class="center">Person</span><span class="center">Spouse</span><span></span>
+        <label>After Tax $</label>
         <input type="number" id="atax1" data-param="atax1" min="0" step="0.1" value="50">
         <input type="number" id="atax2" data-param="atax2" min="0" step="0.1" value="50">
-        <label>Cost basis of above</label>
+        <span class="explain">Non-retirement accounts.</span>
+        <label>Cost Basis $</label>
         <input type="number" id="bsis1" data-param="bsis1" min="0" step="0.1" value="10">
         <input type="number" id="bsis2" data-param="bsis2" min="0" step="0.1" value="10">
-        <label>Tax-deferred IRAs / 401(k)s</label>
+        <span class="explain">Cost basis of above (for cap gains calc).</span>
+        <label>Tax Deferred $</label>
         <input type="number" id="taxd1" data-param="taxd1" min="0" step="0.1" value="100">
         <input type="number" id="taxd2" data-param="taxd2" min="0" step="0.1" value="100">
-        <label>Roth IRAs / 401(k)s</label>
+        <span class="explain">Tax Deferred IRAs and 401(k)s.</span>
+        <label>Roth IRA $</label>
         <input type="number" id="roth1" data-param="roth1" min="0" step="0.1" value="100">
         <input type="number" id="roth2" data-param="roth2" min="0" step="0.1" value="100">
+        <span class="explain">Roth IRAs and 401(k)s.</span>
       </div>
 
       <h3>Social Security</h3>
-      <div class="grid-3">
-        <span></span><span class="center">Person</span><span class="center">Spouse</span>
-        <label>SS income, annual</label>
+      <div class="grid-4">
+        <span></span><span class="center">Person</span><span class="center">Spouse</span><span></span>
+        <label>SSA/year $</label>
         <input type="number" id="ssar1" data-param="ssar1" min="0" step="0.1" value="36">
         <input type="number" id="ssar2" data-param="ssar2" min="0" step="0.1" value="36">
-        <label>Reference age of SS income</label>
+        <span class="explain">Social Security income, annual.</span>
+        <label>Ref. Age</label>
         <input type="number" id="refa1" data-param="refa1" min="0" max="120" value="65">
         <input type="number" id="refa2" data-param="refa2" min="0" max="120" value="65">
-        <label>Age when SS claimed</label>
+        <span class="explain">Reference age of Social Security income.</span>
+        <label>Claim Age</label>
         <input type="number" id="reta1" data-param="reta1" min="0" max="120" value="70">
         <input type="number" id="reta2" data-param="reta2" min="0" max="120" value="65">
+        <span class="explain">Age when Social Security is claimed.</span>
       </div>
 
       <h3>Pensions</h3>
-      <div class="grid-3">
-        <span></span><span class="center">Person</span><span class="center">Spouse</span>
-        <label>Pension / annuity type</label>
+      <div class="grid-4">
+        <span></span><span class="center">Person</span><span class="center">Spouse</span><span></span>
+        <label>Pension</label>
         <select id="popt1" data-param="popt1"><option value="0">Fixed</option><option value="1">COLA</option><option value="2">Lump Sum</option></select>
         <select id="popt2" data-param="popt2"><option value="0">Fixed</option><option value="1">COLA</option><option value="2">Lump Sum</option></select>
-        <label>Annual payment (or lump total)</label>
+        <span class="explain">Taxable Pension or Annuity Type.</span>
+        <label>Pension $</label>
         <input type="number" id="pens1" data-param="pens1" min="0" step="0.1" value="0">
         <input type="number" id="pens2" data-param="pens2" min="0" step="0.1" value="0">
-        <label>Age when claimed</label>
+        <span class="explain">Annual payment for fixed or COLA; total for lump.</span>
+        <label>Claim Age</label>
         <input type="number" id="page1" data-param="page1" min="0" max="120" value="65">
         <input type="number" id="page2" data-param="page2" min="0" max="120" value="65">
-        <label>% for surviving spouse</label>
+        <span class="explain">Age when pension or annuity is claimed.</span>
+        <label>Survivor (%)</label>
         <input type="number" id="pinh1" data-param="pinh1" min="0" step="0.1" value="0">
         <input type="number" id="pinh2" data-param="pinh2" min="0" step="0.1" value="0">
+        <span class="explain">Percentage of benefit for surviving spouse.</span>
       </div>
 
       <h3>Other Income</h3>
@@ -101,7 +138,7 @@
 
       <h3>Phases of Retirement (extraordinary expenses)</h3>
       <div class="phases-grid">
-        <span class="ph-label">Phase</span><span>Year</span><span>Type</span><span>Value</span><span>Note</span>
+        <span class="ph-label">Phase</span><span class="ph-header-year">Year</span><span>Type</span><span>Value</span><span>Note</span>
         <span class="ph-label">1</span><input type="number" id="yr01" data-param="yr01" min="2000" max="2100" value="2025">
         <select id="pr01" data-param="pr01"><option value="0">One-time</option><option value="1">Recurring</option></select>
         <input type="number" id="va01" data-param="va01" min="0" step="0.1" value="0">
@@ -211,69 +248,73 @@
       </div>
 
       <h3>Parameter Save & Load</h3>
-      <div class="grid-2">
+      <div class="grid-2 grid-2-with-buttons">
         <label for="pfname">File path</label>
-        <input type="text" id="pfname" placeholder="path to .csv">
-        <span></span>
-        <button type="button" id="save-btn">Save</button>
-        <button type="button" id="load-btn">Load</button>
+        <div class="input-with-buttons">
+          <input type="text" id="pfname" value="params/fname.csv" placeholder="path to .csv">
+          <div class="button-row">
+            <button type="button" id="save-btn">Save</button>
+            <button type="button" id="load-btn">Load</button>
+          </div>
+        </div>
+      </div>
+      <div class="grid-2 grid-2-with-buttons">
+        <label for="param-buf">Clipboard (CSV)</label>
+        <div class="input-with-buttons">
+          <textarea id="param-buf" rows="4" placeholder="Paste CSV here or copy to clipboard"></textarea>
+          <div class="button-row">
+            <button type="button" id="copy-btn">Dump to CSV</button>
+            <button type="button" id="paste-btn">Load from CSV</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="controls-panel" class="panel controls-section">
+      <h2>Optimizer Controls</h2>
+      <div class="grid-2">
+        <label for="nlpomode">NLP/MIP mode</label>
+        <select id="nlpomode">
+          <option value="0">Normal (fastest)</option>
+          <option value="1">No capital losses</option>
+          <option value="2">No capgains basis averaging</option>
+          <option value="3">Neither</option>
+          <option value="4">Full MINLP</option>
+        </select>
+        <label for="efname">Export CSV path</label>
+        <input type="text" id="efname" value="data/_explore.csv" placeholder="e.g. data/_explore.csv">
       </div>
       <div class="grid-2">
-        <label for="param-buf">Clipboard (CSV)</label>
-        <textarea id="param-buf" rows="4" placeholder="Paste CSV here or copy to clipboard"></textarea>
-        <span></span>
-        <button type="button" id="copy-btn">Copy params</button>
-        <button type="button" id="paste-btn">Paste params</button>
+        <label for="testmode">Test mode</label>
+        <select id="testmode">
+          <option value="0">Normal</option>
+          <option value="1">Test losses</option>
+          <option value="2">Net pretax</option>
+          <option value="3">3-peat</option>
+          <option value="4">Walk</option>
+        </select>
+        <label for="tout">Timeout (s)</label>
+        <input type="number" id="tout" value="60" min="1">
+        <label for="glim">Gap limit</label>
+        <input type="number" id="glim" value="0" step="0.01">
       </div>
-    </aside>
+      <button type="button" id="run-btn">Run Projection</button>
+    </section>
 
-    <div id="right-column">
-      <section id="controls-panel" class="panel">
-        <h2>Optimizer Controls</h2>
-        <div class="grid-2">
-          <label for="nlpomode">NLP/MIP mode</label>
-          <select id="nlpomode">
-            <option value="0">Normal (fastest)</option>
-            <option value="1">No capital losses</option>
-            <option value="2">No capgains basis averaging</option>
-            <option value="3">Neither</option>
-            <option value="4">Full MINLP</option>
-          </select>
-          <label for="efname">Export CSV path</label>
-          <input type="text" id="efname" value="" placeholder="optional">
-        </div>
-        <div class="grid-2">
-          <label for="testmode">Test mode</label>
-          <select id="testmode">
-            <option value="0">Normal</option>
-            <option value="1">Test losses</option>
-            <option value="2">Net pretax</option>
-            <option value="3">3-peat</option>
-            <option value="4">Walk</option>
-          </select>
-          <label for="tout">Timeout (s)</label>
-          <input type="number" id="tout" value="60" min="1">
-          <label for="glim">Gap limit</label>
-          <input type="number" id="glim" value="0" step="0.01">
-        </div>
-        <button type="button" id="run-btn">Run Projection</button>
-      </section>
-
+    <section id="results-section" class="panel results-section">
       <section id="warnings-panel" class="panel">
         <h2>Warnings</h2>
         <div id="warnings"></div>
       </section>
-
       <section id="scip-log-panel" class="panel">
         <h2>SCIP log</h2>
         <pre id="scip-log"></pre>
       </section>
-
       <section id="results-panel" class="panel">
         <h2>Results</h2>
         <div id="results"></div>
       </section>
-    </div>
+    </section>
   </div>
 
   <script src="app.js"></script>
