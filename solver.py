@@ -2,7 +2,14 @@
 # Extracted from e-ORP.ipynb for PyWebView desktop app (R3 plan).
 # Copyright (c) 2020-5 Doug Currie
 
-from planner import make_planning_datadict, hd, set_nut, get_nut, squirrel_map
+from planner import (
+    make_planning_datadict,
+    hd,
+    set_nut,
+    get_nut,
+    squirrel_map,
+    addl_obbba_deduction_age65,
+)
 import statistics
 import pandas as pd
 import pyscipopt
@@ -501,7 +508,7 @@ def oorplp(dd, mode, objective, tout, glim):
     
     # not effective: print('\n', flush = True)
     # not effective: sys.stdout.flush()
-    time.sleep(1.0) # to flush output to the correct widget
+    # (desktop app: stdout redirected to queue; frontend polls)
 
     # with err_out:
     #     print(f'sta {status}')
@@ -617,3 +624,198 @@ def oorplp(dd, mode, objective, tout, glim):
     return (status, dd['net_pretax'][YRS], dd['disp_income'][1], stage, gap, stime)
     
 
+
+
+def oorp(p, mode, objt, test, tout, glim, fname=None, warn_cb=None):
+    """Run the projection; returns (dd, status, net_pretax, di, stage, gap, stime)."""
+    dd = make_planning_datadict(p, test_mode=test, warn_cb=warn_cb)
+    set_nut(dd, 'orp_mode', mode)
+    set_nut(dd, 'orp_objtv', objt)
+    set_nut(dd, 'time_limit', tout)
+    set_nut(dd, 'gap_limit', glim)
+    (status, net_pretax, di, stage, gap, stime) = oorplp(dd, mode, objt, tout, glim)
+    print('\n', flush=True)
+    set_nut(dd, 'scip_status', status)
+    set_nut(dd, 'scip_stage', stage)
+    set_nut(dd, 'scip_gap', gap)
+    set_nut(dd, 'scip_time', stime)
+    if status in ('timelimit', 'optimal', 'gaplimit'):
+        print(f'FTAB: {net_pretax: 4.3f} DI 1st year: {di: 3.3f} Status: {status} at stage {stage} gap {100 * gap: 1.3f}% in {stime: 2.3f} s')
+    else:
+        print(f'Optimization failed, status {status} gap {100 * gap: 1.3f}% in {stime: 2.3f} s')
+    return (dd, status, net_pretax, di, stage, gap, stime)
+
+
+def walk_lap(p, fromyear, mode, tout, glim, warn_cb=None):
+    objt = 0
+    dd = make_planning_datadict(p, test_mode='', historical_year_for_rates=fromyear, warn_cb=warn_cb)
+    set_nut(dd, 'orp_mode', mode)
+    set_nut(dd, 'orp_objtv', objt)
+    set_nut(dd, 'time_limit', tout)
+    set_nut(dd, 'gap_limit', glim)
+    (status, net_pretax, di, stage, gap, stime) = oorplp(dd, mode, objt, tout, glim)
+    print('\n', flush=True)
+    set_nut(dd, 'scip_status', status)
+    set_nut(dd, 'scip_stage', stage)
+    set_nut(dd, 'scip_gap', gap)
+    set_nut(dd, 'scip_time', stime)
+    return (dd, status, net_pretax, di, stage, gap, stime)
+
+
+def walk(p, mode, tout, glim, fname, warn_cb=None):
+    worst_di = 1000000.0
+    sta_yr = 1970
+    nyears = 10
+    if p.get('hist') != 'Use Values Below':
+        sta_yr = int(p['hist'])
+    for y in range(sta_yr, sta_yr + nyears):
+        (dd, status, net_pretax, di, stage, gap, stime) = walk_lap(p, y, mode, tout, glim, warn_cb=warn_cb)
+        if status in ('timelimit', 'optimal', 'gaplimit'):
+            print(f'{y} | DI 1st year: {di: 3.3f} Status: {status} at stage {stage} gap {100 * gap: 1.3f}% in {stime: 2.3f} s')
+            if dd['disp_income'][1] < worst_di:
+                worst_di = dd['disp_income'][1]
+                worst_di_dd = dd
+                worst_year = y
+        else:
+            print(f'{y} | Optimization failed, status {status} gap {100 * gap: 1.3f}% in {stime: 2.3f} s')
+    print(f'{worst_year} | DI 1st year: {worst_di: 3.3f} is lowest...')
+    return (worst_di_dd, worst_year, worst_di, fname)
+
+
+def three_peat(p, mode, tout, glim, fname, warn_cb=None):
+    """Run 3-peat; returns (rf, sm, fname) for render_three_peat."""
+    verbose = True
+    objt = 0
+    dd = make_planning_datadict(p, test_mode='3-peat', warn_cb=warn_cb)
+    set_nut(dd, 'orp_mode', mode)
+    set_nut(dd, 'orp_objtv', objt)
+    set_nut(dd, 'time_limit', tout)
+    set_nut(dd, 'gap_limit', glim)
+
+    def fnvers(i):
+        parts = fname.split('.')
+        ext = parts.pop()
+        parts.append(str(i))
+        parts.append(ext)
+        return '.'.join(parts)
+
+    historical_year_for_rates = 1970
+    if p.get('hist') != 'Use Values Below':
+        historical_year_for_rates = int(p['hist'])
+
+    rs = {
+        'year': list(dd['year']),
+        'e': list(dd['e']),
+        'j': list(dd['j']),
+        'hist_year': list(dd['year']),
+        'ror_stock': dd['ror_stock'].copy(),
+        'dvd_stock': dd['dvd_stock'].copy(),
+        'ror_bonds': dd['ror_bonds'].copy(),
+        'infl_rate': dd['spend_δ'].copy(),
+        'TAB': dd['net_pretax'].copy(),
+        'disp_income': dd['disp_income'].copy(),
+        'IRMAA': dd['IRMAA'].copy(),
+        'income_tax': dd['income_tax'].copy(),
+        'deposits': dd['SSA_income'].copy(),
+        'withdrawals': dd['from_aTax'].copy(),
+        'x_RothConv': dd['e_RothConv'].copy(),
+    }
+    sm = {'initial_DI': 0, 'smallest_DI': 0, 'mean_DI': 0, 'sdtdev_DI': 0, 'FTAB': 0, 'sum_DI': 0}
+    cumm_infl = 1.0
+    rs['TAB'][1] = dd['afterTax'][0] + dd['e_Taxd'][0] + dd['j_Taxd'][0] + dd['e_Roth'][0] + dd['j_Roth'][0]
+    i = 0
+    for year, row in hd[:].loc[historical_year_for_rates:historical_year_for_rates + len(dd['year']) - 2].iterrows():
+        (status, net_pretax, di, stage, gap, stime) = oorplp(dd, mode, objt, tout, glim)
+        print('\n', flush=True)
+        set_nut(dd, 'scip_status', status)
+        set_nut(dd, 'scip_stage', stage)
+        set_nut(dd, 'scip_gap', gap)
+        set_nut(dd, 'scip_time', stime)
+        if status in ('timelimit', 'optimal', 'gaplimit'):
+            print(f'FTAB: {net_pretax: 4.3f} DI 1st year: {di: 3.3f} Status: {status} at stage {stage} gap {100 * gap: 1.3f}% in {stime: 2.3f} s')
+        else:
+            print(f'Optimization failed, status {status} gap {100 * gap: 1.3f}% in {stime: 2.3f} s')
+        i = year - historical_year_for_rates + 1
+        if verbose:
+            dfr = pd.DataFrame(dd, index=dd['year'])
+            dfr.to_csv(fnvers(i))
+        rs['hist_year'][i] = year
+        rs['ror_stock'][i] = ror_stock = row['S']
+        rs['ror_bonds'][i] = ror_bonds = row['B']
+        rs['dvd_stock'][i] = dvd_stock = row['D']
+        rs['infl_rate'][i] = infl_rate = row['I']
+
+        def rori_r(y):
+            return 1.0 + (ror_stock * dd['frac_stock_r'][y] + ror_bonds * dd['frac_bonds_r'][y])
+
+        def rori_d(y):
+            return 1.0 + (ror_stock * dd['frac_stock_d'][y] + ror_bonds * dd['frac_bonds_d'][y])
+
+        dd['e_Taxd'][1] = rori_d(1) * (dd['e_Taxd'][0] - dd['e_RMD'][1] - dd['e_RothConv'][1] - dd['from_eTaxd'][1] + dd['e_Taxd_in'][1])
+        dd['j_Taxd'][1] = rori_d(1) * (dd['j_Taxd'][0] - dd['j_RMD'][1] - dd['j_RothConv'][1] - dd['from_jTaxd'][1] + dd['j_Taxd_in'][1])
+        dd['e_Roth'][1] = rori_r(1) * (dd['e_Roth'][0] - dd['from_eRoth'][1] + dd['e_RothConv'][1])
+        dd['j_Roth'][1] = rori_r(1) * (dd['j_Roth'][0] - dd['from_jRoth'][1] + dd['j_RothConv'][1])
+        assumed_div = dd['dividends'][1]
+        actual_divd = ror_bonds * dd['aTax_bonds'][0] + dvd_stock * (dd['aTax_basis'][0] + dd['aTax_unrlz'][0])
+        if actual_divd < assumed_div:
+            if dd['aTax__cash'][1] > (assumed_div - actual_divd):
+                dd['aTax__cash'][1] -= (assumed_div - actual_divd)
+                dd['afterTax'][1] -= (assumed_div - actual_divd)
+            else:
+                dd['disp_income'][1] -= (assumed_div - actual_divd)
+        else:
+            dd['aTax__cash'][1] -= (assumed_div - actual_divd)
+            dd['afterTax'][1] -= (assumed_div - actual_divd)
+        cumm_infl *= (1.0 + infl_rate)
+        infl_adj = 1.0 + (infl_rate - get_nut(dd, 'inflation'))
+        rs['deposits'][i] = (dd['SSA_income'][1] + dd['misc_income'][1] + dd['pension_income'][1] + dd['taxfree_income'][1] + dd['dividends'][1]) / cumm_infl
+        rs['withdrawals'][i] = (dd['e_RMD'][1] + dd['j_RMD'][1] + dd['from_eTaxd'][1] + dd['from_jTaxd'][1] + dd['from_aTax'][1] - dd['to_aTax'][1] + dd['from_eRoth'][1] + dd['from_jRoth'][1]) / cumm_infl
+        rs['x_RothConv'][i] = (dd['e_RothConv'][1] + dd['j_RothConv'][1]) / cumm_infl
+        rs['disp_income'][i] = dd['disp_income'][1] / cumm_infl
+        rs['income_tax'][i] = dd['income_tax'][1] / cumm_infl
+        rs['IRMAA'][i] = dd['IRMAA'][1] / cumm_infl
+        rs['TAB'][i + 1] = (dd['afterTax'][1] + dd['e_Taxd'][1] + dd['j_Taxd'][1] + dd['e_Roth'][1] + dd['j_Roth'][1]) / cumm_infl
+        if len(dd['e']) < 5:
+            break
+        for _, n in squirrel_map.items():
+            dd[n][1] = dd[n][0]
+        for y in range(2, len(dd['e'])):
+            dd['QCD_limit'][y] *= infl_adj
+            dd['IRMAA-buk0'][y] *= infl_adj
+            dd['IRMAA-buk1'][y] *= infl_adj
+            dd['IRMAA-buk2'][y] *= infl_adj
+            dd['IRMAA-buk3'][y] *= infl_adj
+            dd['IRMAA-buk4'][y] *= infl_adj
+            dd['IRMAA-buk5'][y] *= infl_adj
+            dd['IRMAA-chg0'][y] = float(dd['IRMAA-chg0'][y]) * infl_adj
+            dd['IRMAA-chg1'][y] = float(dd['IRMAA-chg1'][y]) * infl_adj
+            dd['IRMAA-chg2'][y] = float(dd['IRMAA-chg2'][y]) * infl_adj
+            dd['IRMAA-chg3'][y] = float(dd['IRMAA-chg3'][y]) * infl_adj
+            dd['IRMAA-chg4'][y] = float(dd['IRMAA-chg4'][y]) * infl_adj
+            dd['IRMAA-chg5'][y] = float(dd['IRMAA-chg5'][y]) * infl_adj
+            dd['tax0'][y] *= infl_adj
+            dd['tax1'][y] *= infl_adj
+            dd['tax2'][y] *= infl_adj
+            dd['tax3'][y] *= infl_adj
+            dd['tax4'][y] *= infl_adj
+            dd['tax5'][y] *= infl_adj
+            dd['tax6'][y] *= infl_adj
+            dd['cgt0'][y] *= infl_adj
+            dd['cgt15'][y] *= infl_adj
+            dd['SSA_income'][y] *= infl_adj
+            dd['surplus'][y] *= infl_adj
+        for k, v in dd.items():
+            dd[k] = v[1:]
+        set_nut(dd, 'eoplan_spouse', get_nut(dd, 'eoplan_spouse') - 1)
+
+    sm['initial_DI'] = rs['disp_income'][1]
+    sm['smallest_DI'] = min(rs['disp_income'][1:i + 1])
+    sm['mean_DI'] = statistics.mean(rs['disp_income'][1:i + 1])
+    sm['sdtdev_DI'] = statistics.stdev(rs['disp_income'][1:i + 1])
+    sm['FTAB'] = rs['TAB'][i + 1]
+    sm['sum_DI'] = sum(rs['disp_income'][1:i + 1])
+    rsf = pd.DataFrame(rs, index=rs['year'])
+    rf = pd.DataFrame(rsf[1:i + 1])
+    if verbose:
+        rf.to_csv(fnvers(99))
+    return (rf, sm, fname)
