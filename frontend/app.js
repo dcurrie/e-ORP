@@ -88,9 +88,10 @@ function renderResults(items) {
       div.innerHTML = item.html;
       panel.appendChild(div);
     } else if (item.type === 'heading') {
-      const h3 = document.createElement('h3');
-      h3.textContent = item.text;
-      panel.appendChild(h3);
+      const titleEl = document.createElement('div');
+      titleEl.className = 'result-section-title';
+      titleEl.textContent = (item.text || '').replace(/^\s*###\s*/, '');
+      panel.appendChild(titleEl);
     }
   });
 }

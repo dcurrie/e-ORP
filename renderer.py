@@ -27,7 +27,10 @@ def render_dd(dd, fname=None):
         items.append({'type': 'plotly', 'json': json.loads(fig.to_json())})
 
     def add_heading(text):
-        items.append({'type': 'heading', 'text': text.strip()})
+        t = text.strip()
+        if t.startswith('### '):
+            t = t[4:]
+        items.append({'type': 'heading', 'text': t})
 
     def add_table(ndf, columns=None):
         if columns is not None:

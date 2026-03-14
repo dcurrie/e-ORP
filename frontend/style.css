@@ -212,7 +212,16 @@ button {
   text-align: right;
 }
 #results-panel .table-wrapper th { background: #eee; }
-#results-panel h3 { margin-top: 1.25rem; }
+/* Table/section labels: same style as Plotly chart titles */
+#results-panel .result-section-title {
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #2a3f5f;
+  margin: 1.25rem 0 0.4rem 0;
+}
+#results-panel .result-section-title:first-child {
+  margin-top: 0;
+}
 
 /* Responsive: narrow screens reduce grid columns so layout stays usable */
 @media (max-width: 900px) {
