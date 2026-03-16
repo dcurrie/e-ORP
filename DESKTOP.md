@@ -4,24 +4,40 @@ Run the desktop app from the **project directory** so the built-in HTTP server c
 
 ```bash
 cd /path/to/e-ORP
-./ORPy-venv/bin/python main.py
+make desktop
 ```
 
-Or with your own venv:
+Or with the venv directly:
 
 ```bash
 cd /path/to/e-ORP
-python main.py
+./ORPy-venv/bin/python main.py
 ```
 
-## Requirements
+## Requirements and Makefile
 
-- Python 3 with packages in `requirements.txt`: `pandas`, `plotly`, `pyscipopt`, `pywebview`
-- **Plotly.js** (frontend): `frontend/plotly.min.js` is not in the repo. Use **tested version 3.0.1**. Either run `make desktop` (see below) to fetch it, or download manually:
-  - Minified: https://cdn.plot.ly/plotly-3.0.1.min.js → save as `frontend/plotly.min.js`
-  - Or from GitHub: https://github.com/plotly/plotly.js/releases/tag/v3.0.1
+The project uses a **single venv** with split requirements:
 
-To set up everything (venv + Plotly.js): from the project root run `make desktop`. Or create venv and fetch Plotly.js yourself: `python -m venv ORPy-venv && ORPy-venv/bin/pip install -r requirements.txt`, then download `plotly-3.0.1.min.js` to `frontend/plotly.min.js`.
+- **requirements.txt** — shared (pandas, plotly, pyscipopt). Installed by `make venv`.
+- **requirements-desktop.txt** — desktop add-on (pywebview, openpyxl). Installed by `make desktop-setup`.
+- **requirements-notebook.txt** — notebook add-on (jupyter, ipykernel, ipywidgets). Installed when you run `make run`.
+
+**Makefile targets:**
+
+| Target | Purpose |
+|--------|--------|
+| `make venv` | Create venv and install shared deps only. |
+| `make run` | Install notebook add-on (if needed), then start Jupyter Lab. |
+| `make desktop-setup` | Install desktop add-on and download Plotly.js. Run once before first `make desktop`. |
+| `make desktop` | Run the PyWebView app (does `desktop-setup` if needed). |
+| `make clean` | Remove the venv. |
+
+To support **both** notebook and desktop in one venv, install both add-ons once:  
+`ORPy-venv/bin/pip install -r requirements-notebook.txt -r requirements-desktop.txt`
+
+**Plotly.js** (frontend): `frontend/plotly.min.js` is not in the repo. Use **tested version 3.0.1**.  
+`make desktop-setup` (or `make desktop`) fetches it. Or download manually:  
+https://cdn.plot.ly/plotly-3.0.1.min.js → save as `frontend/plotly.min.js`
 
 ## Debug mode
 
@@ -50,7 +66,7 @@ After starting the app:
 
 ## Running the test suite
 
-From the project root with your venv activated:
+The test suite imports the desktop backend (pywebview). Ensure the desktop add-on is installed (`make desktop-setup` or `make desktop` once). From the project root with your venv activated:
 
 ```bash
 ./ORPy-venv/bin/python test/run_tests.py

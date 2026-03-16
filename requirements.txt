@@ -1,5 +1,4 @@
-# e-ORP desktop app (PyWebView) — §3
+# e-ORP shared (notebook + desktop)
 pandas==2.2.3
 plotly==6.1.0
 pyscipopt==5.5.0
-pywebview>=5.3

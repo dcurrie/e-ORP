@@ -3,6 +3,7 @@
 .venv-stage5/
 __pycache__/
 *.pyc
+ORPy-venv/
 scratch/
 params/_*
 data/_*
