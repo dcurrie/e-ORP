@@ -1,0 +1,245 @@
+/* e-ORP frontend — Stage 4 full form and results */
+* { box-sizing: border-box; }
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+}
+header {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #ccc;
+  background: #f8f8f8;
+}
+header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #228b22;
+}
+header .bridge-status {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+header .bridge-status.ready { color: #228b22; font-weight: 500; }
+header .bridge-status.failed { color: #c00; }
+
+#main-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 3rem);
+  max-width: 100%;
+}
+.form-section {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.75rem 1.25rem;
+  background: #fafafa;
+  border-bottom: 1px solid #ccc;
+}
+.controls-section {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.75rem 1.25rem;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ccc;
+}
+.results-section {
+  flex: 1;
+  width: 100%;
+  max-width: 100%;
+  overflow-y: auto;
+  padding: 0.75rem 1.25rem;
+  min-width: 0;
+}
+
+.panel {
+  margin-bottom: 1rem;
+}
+.panel h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.panel h3 {
+  margin: 1rem 0 0.4rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.panel h3:first-of-type { margin-top: 0.5rem; }
+
+.note {
+  font-style: italic;
+  color: #555;
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+/* Form grids — wide layout with room for labels and explanatory text */
+.grid-2 {
+  display: grid;
+  grid-template-columns: minmax(10rem, 30%) minmax(6rem, 1fr);
+  gap: 0.35rem 1rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.grid-2 label { justify-self: end; }
+.grid-2 input, .grid-2 select { max-width: 14rem; }
+.grid-2 textarea { min-width: 12rem; max-width: 24rem; }
+
+.grid-2-with-buttons .input-with-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+.grid-2-with-buttons .input-with-buttons input,
+.grid-2-with-buttons .input-with-buttons textarea {
+  max-width: 24rem;
+  width: 100%;
+}
+.grid-2-with-buttons .button-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.grid-2-with-buttons .button-row button {
+  margin: 0;
+}
+
+.grid-2-with-explain {
+  display: grid;
+  grid-template-columns: minmax(8rem, 20%) minmax(5rem, 8rem) minmax(12rem, 1fr);
+  gap: 0.35rem 1rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.grid-2-with-explain label { justify-self: end; }
+.grid-2-with-explain .explain { font-size: 0.9rem; color: #555; font-style: italic; }
+
+.grid-4 {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1.2fr) minmax(5rem, 6rem) minmax(5rem, 6rem) minmax(10rem, 1.5fr);
+  gap: 0.35rem 0.75rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.grid-4 .center { text-align: center; font-weight: 500; font-size: 0.9rem; }
+.grid-4 label { justify-self: end; }
+.grid-4 input, .grid-4 select { max-width: 100%; }
+.grid-4 .explain { font-size: 0.9rem; color: #555; font-style: italic; }
+
+.inline-3 {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+.inline-3 input { width: 3.5rem; }
+
+.phases-grid {
+  display: grid;
+  grid-template-columns: 2rem 6rem 7.5rem 5rem 1fr;
+  gap: 0.25rem 0.5rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+.phases-grid .ph-label { font-weight: 500; }
+.phases-grid .ph-header-year { padding-left: 0.5rem; }
+.phases-grid input[type="number"] { min-width: 0; width: 100%; }
+.phases-grid input[type="text"] { min-width: 0; }
+.phases-grid select { min-width: 0; width: 100%; }
+
+input[type="number"], input[type="text"], select, textarea {
+  padding: 0.25rem 0.4rem;
+  font-size: inherit;
+}
+button {
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  font-size: inherit;
+  margin-right: 0.5rem;
+  margin-top: 0.25rem;
+}
+#run-btn {
+  padding: 0.5rem 1.25rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+#run-btn:disabled { cursor: not-allowed; opacity: 0.8; }
+
+#scip-log {
+  background: #f0f0f0;
+  padding: 0.5rem;
+  max-height: 140px;
+  overflow: auto;
+  font-size: 0.8rem;
+  font-family: ui-monospace, monospace;
+  white-space: pre-wrap;
+  margin: 0;
+  border: 1px solid #ddd;
+}
+
+.warning {
+  color: #c00;
+  margin: 0.25rem 0;
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+}
+
+#results-panel {
+  width: 100%;
+  max-width: 100%;
+}
+#results-panel .chart {
+  margin: 1rem 0;
+  min-height: 560px;
+  width: 100%;
+}
+#results-panel .table-wrapper {
+  overflow-x: auto;
+  margin: 0.5rem 0 1rem 0;
+  width: 100%;
+}
+#results-panel .table-wrapper table {
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  width: 100%;
+}
+#results-panel .table-wrapper th,
+#results-panel .table-wrapper td {
+  border: 1px solid #ccc;
+  padding: 0.25rem 0.5rem;
+  text-align: right;
+}
+#results-panel .table-wrapper th { background: #eee; }
+/* Table/section labels: same style as Plotly chart titles */
+#results-panel .result-section-title {
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #2a3f5f;
+  margin: 1.25rem 0 0.4rem 0;
+}
+#results-panel .result-section-title:first-child {
+  margin-top: 0;
+}
+
+/* Responsive: narrow screens reduce grid columns so layout stays usable */
+@media (max-width: 900px) {
+  .grid-4 {
+    grid-template-columns: minmax(6rem, 1fr) minmax(4rem, 5rem) minmax(4rem, 5rem) minmax(8rem, 1fr);
+  }
+  .form-section, .controls-section, .results-section {
+    padding: 0.5rem 0.75rem;
+  }
+}
+@media (max-width: 640px) {
+  .grid-4 {
+    grid-template-columns: minmax(5rem, 1fr) minmax(3rem, 4rem) minmax(3rem, 4rem) minmax(6rem, 1fr);
+    gap: 0.25rem 0.5rem;
+  }
+  .grid-4 .explain { font-size: 0.85rem; }
+  .grid-2, .grid-2-with-explain {
+    grid-template-columns: 1fr;
+  }
+  .grid-2 label, .grid-2-with-explain label { justify-self: start; }
+}

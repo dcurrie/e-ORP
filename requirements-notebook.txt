@@ -1,0 +1,5 @@
+# e-ORP notebook add-on (install after requirements.txt)
+jupyter
+jupyterlab
+ipykernel
+ipywidgets

@@ -1,0 +1,4 @@
+# e-ORP desktop add-on (install after requirements.txt)
+pywebview>=5.3
+# For building taxcalc.xlsx (scripts/build_taxcalc_spreadsheet.py)
+openpyxl>=3.1.0

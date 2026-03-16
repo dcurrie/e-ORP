@@ -1,5 +1,10 @@
 .DS_Store
 .ipynb_checkpoints/
+.venv-stage5/
+__pycache__/
+*.pyc
+ORPy-venv/
 scratch/
 params/_*
 data/_*
+frontend/plotly.min.js
