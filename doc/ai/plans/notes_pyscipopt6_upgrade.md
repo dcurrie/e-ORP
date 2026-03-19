@@ -1,6 +1,8 @@
 # Note: Upgrading PySCIPopt to 6.x (GitHub / PyPI latest)
 
-e-ORP currently pins **pyscipopt==5.5.0** (SCIP 9.2). The latest release is **PySCIPOpt 6.1.0** (Feb 2025), which bundles **SCIP 10** and adds a native **IIS API** plus performance and bugfixes. This note summarizes advantages and disadvantages of upgrading.
+e-ORP’s **`requirements.txt`** uses **`pyscipopt>=6,<7`** (PySCIPOpt 6.x / SCIP 10). The latest release line is **PySCIPOpt 6.1.0** (Feb 2025), which bundles **SCIP 10** and adds a native **IIS API** plus performance and bugfixes. This note summarizes advantages and disadvantages of that upgrade.
+
+**Status (2026-03):** Upgrade validated: planner/solver tests, backend/frontend tests, and desktop runs pass. Use the Makefile: targets **`desktop`** and **`notebook`** create and use **`ORPy-venv`** (see `doc/ai/README.md` § Build).
 
 ## Advantages of upgrading to 6.x
 
@@ -17,12 +19,12 @@ e-ORP currently pins **pyscipopt==5.5.0** (SCIP 9.2). The latest release is **Py
 |------|------------|
 | **New bugs** | 6.x is newer; less field exposure than 5.5. Any upgrade can introduce regressions. Mitigate: run the existing test flow and a few manual desktop runs before committing to 6.x. |
 | **API or behavior changes** | 5.5 → 6.0 is a major version jump (SCIP 9 → 10). Deprecations or subtle changes in `getVal`/`getObjVal`/params are possible. Mitigate: after `pip install pyscipopt>=6`, run the full solver path (e.g. one optimal and one infeasible scenario) and compare results. |
-| **Build / install** | 6.x ships with SCIP 10; wheels on PyPI for macOS (x86_64 and arm64, newer OS versions). If you use a custom SCIP build or an older OS, you may need to build from source. Mitigate: try `pip install pyscipopt` in a venv first; fall back to current 5.5 if install or runtime fails. |
+| **Build / install** | 6.x ships with SCIP 10; wheels on PyPI for macOS (x86_64 and arm64, newer OS versions). If you use a custom SCIP build or an older OS, you may need to build from source. Mitigate: `make desktop` or `make notebook` (uses **ORPy-venv**); or `pip install -r requirements.txt` in a local venv. |
 
 ## Recommendation
 
 - **For the infeasibility plan:** Upgrading to **6.x is worthwhile** if the install is smooth on your machine. It removes the Phase 2 workaround (write → SCIP binary → parse) and gives direct access to conflicting constraint names via `generateIIS()`.
-- **Procedure:** In a separate step from the main plan (e.g. a “bump PySCIPopt” task), try 6.1.0 in a branch or venv: update `requirements*.txt` to `pyscipopt>=6,<7`, run tests and a couple of desktop runs, then either adopt 6.x and switch Phase 2 to `generateIIS()`, or stay on 5.5 and keep the subprocess-based IIS in the plan.
+- **Procedure (done):** Bump `requirements.txt` to `pyscipopt>=6,<7`, refresh **ORPy-venv** via `make desktop` / `make notebook`, run `test/test_planner.py`, desktop tests, and a manual run. **Next for the infeasibility plan:** implement Phase 2 with `model.generateIIS()` (no subprocess workaround).
 
 ## References
 
