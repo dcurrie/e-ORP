@@ -1,5 +1,6 @@
 .DS_Store
 .ipynb_checkpoints/
+.venv/
 .venv-stage5/
 __pycache__/
 *.pyc

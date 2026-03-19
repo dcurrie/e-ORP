@@ -1,4 +1,4 @@
 # e-ORP shared (notebook + desktop)
 pandas==2.2.3
 plotly==6.1.0
-pyscipopt==5.5.0
+pyscipopt>=6,<7
