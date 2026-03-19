@@ -14,6 +14,11 @@ The project is used to build both.
 Both versions may be used locally. I usually use a Safari browser.
 The notebook version and repo structure are maintained so that it can be launched in Binder for non-developer use.
 
+## Build
+
+The project uses a Makefile with targets `desktop` for e-ORP desktop and `notebook` for e-ORP on Jupyter.
+The Makefile creates and uses a venv called `ORPy-venv`. 
+
 ## Tools
 
 - macOS
