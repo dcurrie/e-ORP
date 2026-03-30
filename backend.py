@@ -137,6 +137,30 @@ class Api:
         def warn_cb(msg):
             self.window.evaluate_js(f'appendWarning({json.dumps(msg)})')
 
+        def iis_prepare_cb(seconds):
+            """Before IIS: drop queued SCIP text, clear warning + log panes, show status."""
+            try:
+                while True:
+                    self._log_queue.get_nowait()
+            except queue.Empty:
+                pass
+            msg = (
+                f'Computing IIS (irreducible infeasible subsystem); '
+                f'time limit {seconds:g} s (same as solve limit).'
+            )
+            print(msg, flush=True)
+            msg_json = json.dumps(msg)
+            # One round-trip: set pause flag so JS stops calling poll_log during IIS (avoids
+            # main thread blocking on GIL while worker runs generateIIS).
+            self.window.evaluate_js(
+                '(function(){'
+                'window.__eorpPauseLogPoll=true;'
+                'clearWarningsAndScipLogForIIS();'
+                f'appendWarning({msg_json});'
+                'void document.documentElement.offsetHeight;'
+                '})();'
+            )
+
         old_stdout = sys.stdout
         sys.stdout = _QueueWriter(self._log_queue)
         try:
@@ -151,9 +175,19 @@ class Api:
             else:
                 objt = 'net_pretax' if testmode == 2 else 0
                 test = 'test_losses' if testmode == 1 else ''
-                result = oorp(self.params, mode, objt, test, tout, glim, fname=efname, warn_cb=warn_cb)
-                (dd, status, net_pretax, di, stage, gap, stime) = result
-                items = render_dd(dd, efname)
+                result = oorp(
+                    self.params,
+                    mode,
+                    objt,
+                    test,
+                    tout,
+                    glim,
+                    fname=efname,
+                    warn_cb=warn_cb,
+                    iis_prepare_cb=iis_prepare_cb,
+                )
+                (dd, status, net_pretax, di, stage, gap, stime, iis_names) = result
+                items = render_dd(dd, efname, iis_names=iis_names)
 
             self.window.evaluate_js(f'renderResults({json.dumps(items)})')
         except Exception:

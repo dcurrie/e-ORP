@@ -75,6 +75,59 @@ header .bridge-status.failed { color: #c00; }
   font-size: 0.9rem;
 }
 
+.iis-report {
+  margin: 0.5rem 0 1rem 0;
+  padding: 0.75rem 1rem;
+  background: #fff8f0;
+  border: 1px solid #c96;
+  border-radius: 4px;
+  max-width: 100%;
+}
+.iis-intro {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: #333;
+}
+.iis-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+.iis-list li { margin: 0.2rem 0; }
+.iis-hint {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.85rem;
+  color: #444;
+  font-style: italic;
+}
+.iis-more {
+  margin: 0.35rem 0;
+  font-size: 0.85rem;
+  color: #555;
+}
+.iis-details {
+  margin: 0.35rem 0 0.75rem 0;
+}
+.iis-details summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #1a5276;
+}
+.iis-list-rest {
+  max-height: 18rem;
+  overflow-y: auto;
+  margin-top: 0.35rem;
+}
+.iis-copy-row {
+  margin: 0.5rem 0 0 0;
+}
+.iis-copy-btn {
+  font-size: 0.85rem;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+}
+
 /* Form grids — wide layout with room for labels and explanatory text */
 .grid-2 {
   display: grid;

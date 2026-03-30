@@ -11,6 +11,7 @@ from planner import (
     addl_obbba_deduction_age65,
 )
 import statistics
+import time
 import pandas as pd
 import pyscipopt
 
@@ -110,9 +111,45 @@ def lop_to_cents_signed(x):
     else:
         return round(x, 3)
 
-def oorplp(dd, mode, objective, tout, glim):
-    """Run OORPyLP with specified objective, 'net_pretax', 'net_postax', 
-        or a non-string value for maximum DI with a specified residual
+
+def _iis_constraint_names_from_model(scip, tout):
+    """
+    After optimize() reports infeasible, compute an IIS and return sorted unique
+    constraint names from the IIS subproblem. Requires PySCIPOpt 6+ (generateIIS).
+
+    Uses the same wall-clock budget as the main solve: `iis/time` is set from `tout`
+    (seconds). If tout <= 0, uses 300 s so IIS is not unbounded. Also sets
+    `iis/silent` to reduce log volume in the desktop SCIP panel.
+    """
+    try:
+        tl = float(tout) if tout is not None else 300.0
+        if tl <= 0:
+            tl = 300.0
+        scip.setParam("iis/time", tl)
+        scip.setParam("iis/silent", True)
+        iis = scip.generateIIS()
+        sub = iis.getSubscip()
+        names = []
+        for cons in sub.getConss():
+            n = cons.name
+            if n:
+                names.append(str(n))
+        return sorted(set(names)) if names else None
+    except Exception:
+        return None
+
+
+def oorplp(dd, mode, objective, tout, glim, iis_prepare_cb=None):
+    """Run OORPyLP with specified objective, 'net_pretax', 'net_postax',
+        or a non-string value for maximum DI with a specified residual.
+
+    iis_prepare_cb: optional callable(seconds: float) invoked when status is
+        infeasible, immediately before IIS generation (e.g. to refresh the UI).
+
+    Returns:
+        (status, net_pretax, di, stage, gap, stime, iis_names)
+        iis_names is a sorted list of constraint names in the IIS if status is
+        infeasible and IIS computation succeeds; otherwise None.
     """
     # mode: 0: default, 1: no capital losses 2: no capgains basis averaging 3: neither 4: full slow mode
     # the default mode 0 is the same as mode 3: neither capital losses nor cost basis averaging
@@ -127,6 +164,18 @@ def oorplp(dd, mode, objective, tout, glim):
         return 1.0 + (dd['ror_stock'][y] * dd['frac_stock_d'][y] + dd['ror_bonds'][y] * dd['frac_bonds_d'][y])
     # the model
     scip = pyscipopt.Model()
+    _cons_seq = [0]
+
+    def add_cons(expr, name=None):
+        """Add a linear/nonlinear constraint with a unique name (for IIS reporting).
+
+        Pass ``name=`` for a thin set of high-signal constraints (IIS hints); otherwise
+        names are sequential ``eorp_NNNNN``.
+        """
+        _cons_seq[0] += 1
+        cname = name if name is not None else ("eorp_%05d" % _cons_seq[0])
+        return scip.addCons(expr, name=cname)
+
     # scip.setEmphasis(pyscipopt.SCIP_PARAMEMPHASIS.HARDLP) # ? NUMERICS, PHASEFEAS, CPSOLVER no help
     # set up problem
     YRS = len(dd['e']) - 1 # number of years of projection from base year 0
@@ -233,104 +282,110 @@ def oorplp(dd, mode, objective, tout, glim):
         scip.setObjective(vars[objective][YRS], sense="maximize")
         # subject to:
         for y in range(1,YRS+1):
-            scip.addCons(dd['disp_income'][y] == vars['disp_income'][y])
+            add_cons(dd['disp_income'][y] == vars['disp_income'][y], name=f"eorp_fix_disp_y{y}")
     else:
         #scip.setObjective(vars['disp_income'][0], sense="maximize") # 'Maximize Spend'
         scip.setObjective(vars['discretionary_spend'][0], sense="maximize") # 'Maximize Spend'
         # subject to growth and minimum residual:
-        scip.addCons(vars['net_pretax'][YRS] >= ftab) # 'Minimum Residual'
+        add_cons(vars['net_pretax'][YRS] >= ftab, name="eorp_min_residual_final")  # Minimum Residual
         # mantain spending curve
         for y in range(1,YRS+1):
-            scip.addCons(vars['discretionary_spend'][y] == dd['spend_δ'][y] * vars['discretionary_spend'][y-1])
-            scip.addCons(vars['disp_income'][y] == vars['discretionary_spend'][y] + dd['spend_essence'][y])
+            add_cons(
+                vars['discretionary_spend'][y] == dd['spend_δ'][y] * vars['discretionary_spend'][y-1],
+                name=f"eorp_spend_delta_y{y}",
+            )
+            add_cons(
+                vars['disp_income'][y] == vars['discretionary_spend'][y] + dd['spend_essence'][y],
+                name=f"eorp_disp_from_disc_y{y}",
+            )
     
     # Initial Values Constraints
-    scip.addCons(vars['e_Roth'][0] == dd['e_Roth'][0])
-    scip.addCons(vars['e_Taxd'][0] == dd['e_Taxd'][0])
-    scip.addCons(vars['j_Roth'][0] == dd['j_Roth'][0])
-    scip.addCons(vars['j_Taxd'][0] == dd['j_Taxd'][0])
-    scip.addCons(vars['afterTax'][0] == dd['afterTax'][0])
-    scip.addCons(vars['aTax__cash'][0] == dd['aTax__cash'][0])
-    scip.addCons(vars['aTax_bonds'][0] == dd['aTax_bonds'][0])
-    scip.addCons(vars['aTax_basis'][0] == dd['aTax_basis'][0])
+    add_cons(vars['e_Roth'][0] == dd['e_Roth'][0], name="eorp_init_e_roth_0")
+    add_cons(vars['e_Taxd'][0] == dd['e_Taxd'][0], name="eorp_init_e_taxd_0")
+    add_cons(vars['j_Roth'][0] == dd['j_Roth'][0], name="eorp_init_j_roth_0")
+    add_cons(vars['j_Taxd'][0] == dd['j_Taxd'][0], name="eorp_init_j_taxd_0")
+    add_cons(vars['afterTax'][0] == dd['afterTax'][0], name="eorp_init_aftertax_0")
+    add_cons(vars['aTax__cash'][0] == dd['aTax__cash'][0], name="eorp_init_atax_cash_0")
+    add_cons(vars['aTax_bonds'][0] == dd['aTax_bonds'][0], name="eorp_init_atax_bonds_0")
+    add_cons(vars['aTax_basis'][0] == dd['aTax_basis'][0], name="eorp_init_atax_basis_0")
     if dd['aTax_unrlz'][0] < 0:
-        scip.addCons(vars['aTax_unrlz_gain'][0] == 0)
+        add_cons(vars['aTax_unrlz_gain'][0] == 0, name="eorp_init_unrlz_gain_0")
         if no_capital_losses:
-            scip.addCons(vars['aTax_unrlz_loss'][0] == 0) # make_planning_datadict will have issued a warning
+            add_cons(vars['aTax_unrlz_loss'][0] == 0, name="eorp_init_unrlz_loss_0")  # make_planning_datadict will have issued a warning
         else:
-            scip.addCons(vars['aTax_unrlz_loss'][0] == -dd['aTax_unrlz'][0])
+            add_cons(vars['aTax_unrlz_loss'][0] == -dd['aTax_unrlz'][0], name="eorp_init_unrlz_loss_0")
     else:
-        scip.addCons(vars['aTax_unrlz_loss'][0] == 0)
-        scip.addCons(vars['aTax_unrlz_gain'][0] == dd['aTax_unrlz'][0])
+        add_cons(vars['aTax_unrlz_loss'][0] == 0, name="eorp_init_unrlz_loss_0")
+        add_cons(vars['aTax_unrlz_gain'][0] == dd['aTax_unrlz'][0], name="eorp_init_unrlz_gain_0")
 
     # Calculation Constraints
     for y in range(1,YRS+1):
-        scip.addCons(vars['e_RMD'][y] == dd['e_RMD_factor'][y] * vars['e_Taxd'][y-1])
-        scip.addCons(vars['j_RMD'][y] == dd['j_RMD_factor'][y] * vars['j_Taxd'][y-1])
+        add_cons(vars['e_RMD'][y] == dd['e_RMD_factor'][y] * vars['e_Taxd'][y-1], name=f"eorp_e_rmd_y{y}")
+        add_cons(vars['j_RMD'][y] == dd['j_RMD_factor'][y] * vars['j_Taxd'][y-1], name=f"eorp_j_rmd_y{y}")
 
         # AfterTax asset allocations
-        scip.addCons(vars['afterTax'][y]  == vars['aTax__cash'][y] + vars['aTax_bonds'][y] + vars['aTax_basis'][y]  \
+        add_cons(vars['afterTax'][y]  == vars['aTax__cash'][y] + vars['aTax_bonds'][y] + vars['aTax_basis'][y]  \
                                              + vars['aTax_unrlz_gain'][y] - vars['aTax_unrlz_loss'][y])
-        scip.addCons(vars['from_aTax'][y] == vars['fm_aTax__cash'][y] + vars['fm_aTax_bonds'][y] \
+        add_cons(vars['from_aTax'][y] == vars['fm_aTax__cash'][y] + vars['fm_aTax_bonds'][y] \
                                              + vars['fm_aTax_basis'][y] \
                                              + vars['fm_aTax_unrlz_gain'][y] - vars['fm_aTax_unrlz_loss'][y])
-        scip.addCons(vars['to_aTax'][y]   == vars['to_aTax__cash'][y] + vars['to_aTax_bonds'][y] \
+        add_cons(vars['to_aTax'][y]   == vars['to_aTax__cash'][y] + vars['to_aTax_bonds'][y] \
                                              + vars['to_aTax_basis'][y] + vars['to_aTax_unrlz'][y])
         
-        scip.addCons(vars['afterTax'][y] * dd['frac_stock_a'][y] \
+        add_cons(vars['afterTax'][y] * dd['frac_stock_a'][y] \
                                  == vars['aTax_basis'][y] + vars['aTax_unrlz_gain'][y] - vars['aTax_unrlz_loss'][y])
-        scip.addCons(vars['afterTax'][y] * dd['frac_bonds_a'][y] == vars['aTax_bonds'][y])
+        add_cons(vars['afterTax'][y] * dd['frac_bonds_a'][y] == vars['aTax_bonds'][y])
         
-        scip.addCons(vars['fm_aTax__cash'][y] <= vars['aTax__cash'][y-1])
-        scip.addCons(vars['fm_aTax_bonds'][y] <= vars['aTax_bonds'][y-1])
+        add_cons(vars['fm_aTax__cash'][y] <= vars['aTax__cash'][y-1])
+        add_cons(vars['fm_aTax_bonds'][y] <= vars['aTax_bonds'][y-1])
 
         if no_capgains_constraints:
-            scip.addCons(vars['fm_aTax_basis'][y]      <= vars['aTax_basis'][y-1])
-            scip.addCons(vars['fm_aTax_unrlz_gain'][y] <= vars['aTax_unrlz_gain'][y-1])
-            scip.addCons(vars['fm_aTax_unrlz_loss'][y] <= vars['aTax_unrlz_loss'][y-1])
+            add_cons(vars['fm_aTax_basis'][y]      <= vars['aTax_basis'][y-1])
+            add_cons(vars['fm_aTax_unrlz_gain'][y] <= vars['aTax_unrlz_gain'][y-1])
+            add_cons(vars['fm_aTax_unrlz_loss'][y] <= vars['aTax_unrlz_loss'][y-1])
         else:
-            scip.addCons(vars['fm_aTax_basis'][y]      == vars['fm_aTax_frac'][y] * vars['aTax_basis'][y-1])
-            scip.addCons(vars['fm_aTax_unrlz_gain'][y] == vars['fm_aTax_frac'][y] * vars['aTax_unrlz_gain'][y-1])
-            scip.addCons(vars['fm_aTax_unrlz_loss'][y] == vars['fm_aTax_frac'][y] * vars['aTax_unrlz_loss'][y-1])
+            add_cons(vars['fm_aTax_basis'][y]      == vars['fm_aTax_frac'][y] * vars['aTax_basis'][y-1])
+            add_cons(vars['fm_aTax_unrlz_gain'][y] == vars['fm_aTax_frac'][y] * vars['aTax_unrlz_gain'][y-1])
+            add_cons(vars['fm_aTax_unrlz_loss'][y] == vars['fm_aTax_frac'][y] * vars['aTax_unrlz_loss'][y-1])
 
-        scip.addCons(vars['aTax_unrlz_gain'][y] - vars['aTax_unrlz_loss'][y] \
+        add_cons(vars['aTax_unrlz_gain'][y] - vars['aTax_unrlz_loss'][y] \
                          == (vars['aTax_unrlz_gain'][y-1] - vars['fm_aTax_unrlz_gain'][y]) \
                           - (vars['aTax_unrlz_loss'][y-1] - vars['fm_aTax_unrlz_loss'][y]) \
                           + vars['to_aTax_unrlz'][y])
             
         if no_capital_losses:
-            scip.addCons(vars['aTax_unrlz_loss'][y] == 0)
+            add_cons(vars['aTax_unrlz_loss'][y] == 0)
         else:
             # unfortuately, the first form using a disjunction leads to symmetry problems in SCIP:
             #scip.addConsDisjunction([vars['aTax_unrlz_gain'][y] == 0, vars['aTax_unrlz_loss'][y] == 0])
             # so I use the multiplication instead:
-            scip.addCons(vars['aTax_unrlz_gain'][y] * vars['aTax_unrlz_loss'][y] == 0)
+            add_cons(vars['aTax_unrlz_gain'][y] * vars['aTax_unrlz_loss'][y] == 0)
 
-        scip.addCons(vars['aTax__cash'][y] == vars['aTax__cash'][y-1] + vars['to_aTax__cash'][y] - vars['fm_aTax__cash'][y])
-        scip.addCons(vars['aTax_bonds'][y] == vars['aTax_bonds'][y-1] + vars['to_aTax_bonds'][y] - vars['fm_aTax_bonds'][y])
-        scip.addCons(vars['aTax_basis'][y] == vars['aTax_basis'][y-1] + vars['to_aTax_basis'][y] - vars['fm_aTax_basis'][y])
+        add_cons(vars['aTax__cash'][y] == vars['aTax__cash'][y-1] + vars['to_aTax__cash'][y] - vars['fm_aTax__cash'][y])
+        add_cons(vars['aTax_bonds'][y] == vars['aTax_bonds'][y-1] + vars['to_aTax_bonds'][y] - vars['fm_aTax_bonds'][y])
+        add_cons(vars['aTax_basis'][y] == vars['aTax_basis'][y-1] + vars['to_aTax_basis'][y] - vars['fm_aTax_basis'][y])
                 
-        scip.addCons(vars['to_aTax_unrlz'][y] == (dd['ror_stock'][y] - dd['dvd_stock'][y]) \
+        add_cons(vars['to_aTax_unrlz'][y] == (dd['ror_stock'][y] - dd['dvd_stock'][y]) \
                                                      * (vars['aTax_basis'][y-1] \
                                                         + vars['aTax_unrlz_gain'][y-1]
                                                         - vars['aTax_unrlz_loss'][y-1]))
         
-        scip.addCons(vars['dividends'][y] == dd['ror_bonds'][y] * vars['aTax_bonds'][y-1] \
+        add_cons(vars['dividends'][y] == dd['ror_bonds'][y] * vars['aTax_bonds'][y-1] \
                                              + dd['dvd_stock'][y] * (vars['aTax_basis'][y-1] \
                                                                     + vars['aTax_unrlz_gain'][y-1]
                                                                     - vars['aTax_unrlz_loss'][y-1]))
         
-        scip.addCons(vars['capgains'][y] == vars['fm_aTax_unrlz_gain'][y])
+        add_cons(vars['capgains'][y] == vars['fm_aTax_unrlz_gain'][y])
         
         if no_capital_losses:
-            scip.addCons(vars['caplosss'][y] == 0.0)
+            add_cons(vars['caplosss'][y] == 0.0)
         else:
-            scip.addCons(vars['caplosss'][y] + vars['caplossz'][y] == vars['fm_aTax_unrlz_loss'][y])
-            scip.addCons(vars['caplosss'][y] <= 3.0)
+            add_cons(vars['caplosss'][y] + vars['caplossz'][y] == vars['fm_aTax_unrlz_loss'][y])
+            add_cons(vars['caplosss'][y] <= 3.0)
 
         # Roth Conversions)
-        scip.addCons(vars['e_RothConv'][y] <= vars['e_Taxd'][y-1])
-        scip.addCons(vars['j_RothConv'][y] <= vars['j_Taxd'][y-1])
+        add_cons(vars['e_RothConv'][y] <= vars['e_Taxd'][y-1], name=f"eorp_rothconv_e_le_taxd_y{y}")
+        add_cons(vars['j_RothConv'][y] <= vars['j_Taxd'][y-1], name=f"eorp_rothconv_j_le_taxd_y{y}")
         rlim = get_nut(dd, 'Roth_conv_max')
         if rlim != 'unlimited':
             scip.addConsDisjunction([vars['e_RothConv'][y] + vars['j_RothConv'][y] == 0.0,
@@ -360,13 +415,19 @@ def oorplp(dd, mode, objective, tout, glim):
                                          + vars['cgt15'][y] + vars['cgt0'][y] == 0.0 \
                                         if rlim == 'tax0' else
                                      vars[rlim][y] == 0.0
-                                   ])
+                                   ], name="eorp_rothlim_y%d" % y)
 
         # QCD Calculation
-        scip.addCons(vars['QCD'][y] + vars['nQCD'][y] == dd['charity'][y])
-        scip.addCons(vars['QCD'][y] <= dd['QCD_limit'][y])
-        scip.addCons(vars['QCD'][y] <= vars['e_RMD'][y] + vars['j_RMD'][y] \
-                                       + vars['from_eTaxd'][y] + vars['from_jTaxd'][y])
+        add_cons(vars['QCD'][y] + vars['nQCD'][y] == dd['charity'][y], name=f"eorp_qcd_charity_y{y}")
+        add_cons(vars['QCD'][y] <= dd['QCD_limit'][y], name=f"eorp_qcd_limit_y{y}")
+        add_cons(
+            vars['QCD'][y]
+            <= vars['e_RMD'][y]
+            + vars['j_RMD'][y]
+            + vars['from_eTaxd'][y]
+            + vars['from_jTaxd'][y],
+            name=f"eorp_qcd_le_rmd_wthd_y{y}",
+        )
 
         # IRMAA Calculation
         # IRMAA-pax: 0, 1, 2 # individuals over 65
@@ -378,13 +439,13 @@ def oorplp(dd, mode, objective, tout, glim):
         # IRMAA = IRMAA-pax * (IRMAA-chg[n] * IRMAA-bin[n] for n in 0..5) 
         # dd has precomputed IRMAA-pax * IRMAA-chg
         
-        scip.addCons(vars['IRMAA-bin0'][y] >= vars['IRMAA-bin1'][y])
-        scip.addCons(vars['IRMAA-bin1'][y] >= vars['IRMAA-bin2'][y])
-        scip.addCons(vars['IRMAA-bin2'][y] >= vars['IRMAA-bin3'][y])
-        scip.addCons(vars['IRMAA-bin3'][y] >= vars['IRMAA-bin4'][y])
-        scip.addCons(vars['IRMAA-bin4'][y] >= vars['IRMAA-bin5'][y])
+        add_cons(vars['IRMAA-bin0'][y] >= vars['IRMAA-bin1'][y])
+        add_cons(vars['IRMAA-bin1'][y] >= vars['IRMAA-bin2'][y])
+        add_cons(vars['IRMAA-bin2'][y] >= vars['IRMAA-bin3'][y])
+        add_cons(vars['IRMAA-bin3'][y] >= vars['IRMAA-bin4'][y])
+        add_cons(vars['IRMAA-bin4'][y] >= vars['IRMAA-bin5'][y])
         
-        scip.addCons(MAGI_m2(y) <= vars['IRMAA-bin0'][y] * dd['IRMAA-buk0'][y] \
+        add_cons(MAGI_m2(y) <= vars['IRMAA-bin0'][y] * dd['IRMAA-buk0'][y] \
                                  + vars['IRMAA-bin1'][y] * dd['IRMAA-buk1'][y] \
                                  + vars['IRMAA-bin2'][y] * dd['IRMAA-buk2'][y] \
                                  + vars['IRMAA-bin3'][y] * dd['IRMAA-buk3'][y] \
@@ -392,7 +453,7 @@ def oorplp(dd, mode, objective, tout, glim):
                                  + vars['IRMAA-bin5'][y] * dd['IRMAA-buk5'][y] \
                                  + 0.00001) # this <= $0.01 fudge factor seems to rescue some otherwise non-converging soltions
 
-        scip.addCons(vars['IRMAA'][y] == vars['IRMAA-bin0'][y] * dd['IRMAA-chg0'][y] \
+        add_cons(vars['IRMAA'][y] == vars['IRMAA-bin0'][y] * dd['IRMAA-chg0'][y] \
                                       + vars['IRMAA-bin1'][y] * dd['IRMAA-chg1'][y] \
                                       + vars['IRMAA-bin2'][y] * dd['IRMAA-chg2'][y] \
                                       + vars['IRMAA-bin3'][y] * dd['IRMAA-chg3'][y] \
@@ -401,22 +462,30 @@ def oorplp(dd, mode, objective, tout, glim):
 
         # Income Calculation
 
-        scip.addCons(vars['auto_income'][y] == vars['e_RMD'][y] + vars['j_RMD'][y] + vars['dividends'][y] \
+        add_cons(vars['auto_income'][y] == vars['e_RMD'][y] + vars['j_RMD'][y] + vars['dividends'][y] \
                                                 + dd['misc_income'][y] + dd['SSA_income'][y] \
                                                 + dd['taxfree_income'][y] \
                                                 + dd['pension_income'][y] - vars['IRMAA'][y])
 
-        scip.addCons(vars['taxable_income'][y] == vars['e_RMD'][y] + vars['j_RMD'][y] + vars['dividends'][y] \
+        add_cons(vars['taxable_income'][y] == vars['e_RMD'][y] + vars['j_RMD'][y] + vars['dividends'][y] \
                                                 + dd["misc_income"][y] + 0.85 * dd["SSA_income"][y] - vars['caplosss'][y] \
                                                 + vars['from_eTaxd'][y] + vars['from_jTaxd'][y] - vars['QCD'][y] \
                                                 + dd['pension_income'][y] + vars['e_RothConv'][y] + vars['j_RothConv'][y])
 
         # Spending
         
-        scip.addCons(vars['disp_income'][y] == vars['auto_income'][y] + vars['from_aTax'][y] \
-                                            + vars['from_eTaxd'][y] + vars['from_jTaxd'][y] \
-                                            + vars['from_eRoth'][y] + vars['from_jRoth'][y] \
-                                            - vars['income_tax'][y] - vars['to_aTax'][y])
+        add_cons(
+            vars['disp_income'][y]
+            == vars['auto_income'][y]
+            + vars['from_aTax'][y]
+            + vars['from_eTaxd'][y]
+            + vars['from_jTaxd'][y]
+            + vars['from_eRoth'][y]
+            + vars['from_jRoth'][y]
+            - vars['income_tax'][y]
+            - vars['to_aTax'][y],
+            name=f"eorp_disp_balance_y{y}",
+        )
 
         # Taxation - XXX qualified dividends?
 
@@ -426,24 +495,24 @@ def oorplp(dd, mode, objective, tout, glim):
         # OBBBA_exc: == (MAGI - (OBBBA-pax * 75.000)
         # OBBBA-ded: <= OBBBA-pax * 6.000 - (OBBBA-pax * 0.06 * OBBBA_exc))
 
-        scip.addCons(vars['MAGI'][y] == vars['e_RMD'][y] + vars['j_RMD'][y] + vars['dividends'][y] \
+        add_cons(vars['MAGI'][y] == vars['e_RMD'][y] + vars['j_RMD'][y] + vars['dividends'][y] \
                                             + dd["misc_income"][y] + dd['pension_income'][y] + dd["SSA_income"][y] \
                                             + vars['from_eTaxd'][y] + vars['from_jTaxd'][y] - vars['caplosss'][y] \
                                             + vars['capgains'][y] + vars['e_RothConv'][y] + vars['j_RothConv'][y])
         
-        scip.addCons(vars['obbba_exc'][y] >= vars['MAGI'][y] - dd['obbba_pax'][y] * 75.0) # lower bound is 0
+        add_cons(vars['obbba_exc'][y] >= vars['MAGI'][y] - dd['obbba_pax'][y] * 75.0) # lower bound is 0
 
-        scip.addCons(vars['tax0'][y] <= dd['tax0'][y])
-        scip.addCons(vars['tax1'][y] <= dd['tax1'][y])
-        scip.addCons(vars['tax2'][y] <= dd['tax2'][y])
-        scip.addCons(vars['tax3'][y] <= dd['tax3'][y])
-        scip.addCons(vars['tax4'][y] <= dd['tax4'][y])
-        scip.addCons(vars['tax5'][y] <= dd['tax5'][y])
-        scip.addCons(vars['tax6'][y] <= dd['tax6'][y])
-        scip.addCons(vars['taxb'][y] <= dd['obbba_pax'][y] * addl_obbba_deduction_age65 \
+        add_cons(vars['tax0'][y] <= dd['tax0'][y])
+        add_cons(vars['tax1'][y] <= dd['tax1'][y])
+        add_cons(vars['tax2'][y] <= dd['tax2'][y])
+        add_cons(vars['tax3'][y] <= dd['tax3'][y])
+        add_cons(vars['tax4'][y] <= dd['tax4'][y])
+        add_cons(vars['tax5'][y] <= dd['tax5'][y])
+        add_cons(vars['tax6'][y] <= dd['tax6'][y])
+        add_cons(vars['taxb'][y] <= dd['obbba_pax'][y] * addl_obbba_deduction_age65 \
                                         - (dd['obbba_pax'][y] * 0.06 * vars['obbba_exc'][y]))
 
-        scip.addCons(vars['taxable_income'][y] == vars['tax0'][y] \
+        add_cons(vars['taxable_income'][y] == vars['tax0'][y] \
                                                 + vars['taxb'][y] \
                                                 + vars['tax1'][y] \
                                                 + vars['tax2'][y] \
@@ -455,23 +524,23 @@ def oorplp(dd, mode, objective, tout, glim):
     
         # capgains tax
         
-        scip.addCons(vars['capgains'][y] == vars['cgt0'][y] + vars['cgt15'][y] + vars['cgt20'][y])
+        add_cons(vars['capgains'][y] == vars['cgt0'][y] + vars['cgt15'][y] + vars['cgt20'][y])
 
-        scip.addCons(vars['cgbin15'][y] >= vars['cgbin20'][y])
+        add_cons(vars['cgbin15'][y] >= vars['cgbin20'][y])
 
-        scip.addCons(vars['taxable_income'][y] <= dd['cgt0'][y] + vars['taxb'][y] + 
+        add_cons(vars['taxable_income'][y] <= dd['cgt0'][y] + vars['taxb'][y] + 
                                                       vars['cgbin15'][y] * dd['cgt15'][y] + 
                                                       vars['cgbin20'][y] * 999.0)
 
-        scip.addCons(vars['taxable_income'][y] == vars['cgbin15'][y] * (dd['cgt0'][y] + vars['taxb'][y]) +
+        add_cons(vars['taxable_income'][y] == vars['cgbin15'][y] * (dd['cgt0'][y] + vars['taxb'][y]) +
                                                       vars['cgbin20'][y] * dd['cgt15'][y] + 
                                                       vars['ncgt'][y])
 
-        scip.addCons(vars['cgt0'][y] <= (1 - vars['cgbin15'][y]) * (dd['cgt0'][y] + vars['taxb'][y] - vars['ncgt'][y]))
+        add_cons(vars['cgt0'][y] <= (1 - vars['cgbin15'][y]) * (dd['cgt0'][y] + vars['taxb'][y] - vars['ncgt'][y]))
 
-        scip.addCons(vars['cgt15'][y] <= (1 - vars['cgbin20'][y]) * (dd['cgt15'][y] - vars['ncgt'][y]))
+        add_cons(vars['cgt15'][y] <= (1 - vars['cgbin20'][y]) * (dd['cgt15'][y] - vars['ncgt'][y]))
 
-        scip.addCons(vars['income_tax'][y] == 0.0 * vars['tax0'][y] \
+        add_cons(vars['income_tax'][y] == 0.0 * vars['tax0'][y] \
                                             + 0.0 * vars['taxb'][y] \
                                             + 0.10 * vars['tax1'][y] \
                                             + 0.12 * vars['tax2'][y] \
@@ -485,20 +554,28 @@ def oorplp(dd, mode, objective, tout, glim):
 
         # Annual Accounts Update
         
-        scip.addCons(vars['e_Roth'][y] == rori_r(y) * (vars['e_Roth'][y-1] - vars['from_eRoth'][y] + vars['e_RothConv'][y]))
-        scip.addCons(vars['e_Taxd'][y] == rori_d(y) * (vars['e_Taxd'][y-1] - vars['e_RMD'][y] \
+        add_cons(vars['e_Roth'][y] == rori_r(y) * (vars['e_Roth'][y-1] - vars['from_eRoth'][y] + vars['e_RothConv'][y]))
+        add_cons(vars['e_Taxd'][y] == rori_d(y) * (vars['e_Taxd'][y-1] - vars['e_RMD'][y] \
                                          + dd['e_Taxd_in'][y] # lump sum pension distribution
                                          - vars['from_eTaxd'][y] - vars['e_RothConv'][y]))
-        scip.addCons(vars['j_Roth'][y] == rori_r(y) * (vars['j_Roth'][y-1] - vars['from_jRoth'][y] + vars['j_RothConv'][y]))
-        scip.addCons(vars['j_Taxd'][y] == rori_d(y) * (vars['j_Taxd'][y-1] - vars['j_RMD'][y] \
+        add_cons(vars['j_Roth'][y] == rori_r(y) * (vars['j_Roth'][y-1] - vars['from_jRoth'][y] + vars['j_RothConv'][y]))
+        add_cons(vars['j_Taxd'][y] == rori_d(y) * (vars['j_Taxd'][y-1] - vars['j_RMD'][y] \
                                          + dd['j_Taxd_in'][y] # lump sum pension distribution
                                          - vars['from_jTaxd'][y] - vars['j_RothConv'][y]))
 
         # For "reasons," the optimizer moves all money into afterTax in the last year of the plan.
         # Until I figure out why, or discover a constraint to prevent that, the 0.999... hack...
-        scip.addCons(vars['net_pretax'][y] \
-                        == (0.999999 * vars['afterTax'][y] + vars['e_Taxd'][y] + vars['j_Taxd'][y] \
-                            + vars['e_Roth'][y] + vars['j_Roth'][y]))
+        add_cons(
+            vars['net_pretax'][y]
+            == (
+                0.999999 * vars['afterTax'][y]
+                + vars['e_Taxd'][y]
+                + vars['j_Taxd'][y]
+                + vars['e_Roth'][y]
+                + vars['j_Roth'][y]
+            ),
+            name=f"eorp_net_pretax_def_y{y}",
+        )
 
     scip.setParam("limits/time", tout)
     scip.setParam("limits/gap", glim / 100)
@@ -514,7 +591,25 @@ def oorplp(dd, mode, objective, tout, glim):
     #     print(f'sta {status}')
     #     print(f'stg {stage}')
 
+    iis_names = None
     if status == 'infeasible': # and stage == 'SOLVED':
+        _tl = float(tout) if tout is not None else 300.0
+        if _tl <= 0:
+            _tl = 300.0
+        if iis_prepare_cb:
+            iis_prepare_cb(_tl)
+        else:
+            print(
+                f'Computing IIS (irreducible infeasible subsystem); '
+                f'time limit {_tl:g} s.\n',
+                flush=True,
+            )
+        # Let the GUI thread repaint: poll_log + evaluate_js use the GIL; generateIIS()
+        # can hold it for a long time on some builds, which would block the main thread
+        # (Cocoa beach ball) if a timer still calls poll_log.
+        time.sleep(0.05)
+        # IIS is a second solve; use same time limit as main optimize (`tout`).
+        iis_names = _iis_constraint_names_from_model(scip, tout)
         # fudge
         dd['net_pretax'][YRS] = 0
         dd['disp_income'][1] = 0
@@ -623,19 +718,21 @@ def oorplp(dd, mode, objective, tout, glim):
     
     scip.freeProb() # removes model from its cache memory
     
-    return (status, dd['net_pretax'][YRS], dd['disp_income'][1], stage, gap, stime)
+    return (status, dd['net_pretax'][YRS], dd['disp_income'][1], stage, gap, stime, iis_names)
     
 
 
 
-def oorp(p, mode, objt, test, tout, glim, fname=None, warn_cb=None):
-    """Run the projection; returns (dd, status, net_pretax, di, stage, gap, stime)."""
+def oorp(p, mode, objt, test, tout, glim, fname=None, warn_cb=None, iis_prepare_cb=None):
+    """Run the projection; returns (dd, status, net_pretax, di, stage, gap, stime, iis_names)."""
     dd = make_planning_datadict(p, test_mode=test, warn_cb=warn_cb)
     set_nut(dd, 'orp_mode', mode)
     set_nut(dd, 'orp_objtv', objt)
     set_nut(dd, 'time_limit', tout)
     set_nut(dd, 'gap_limit', glim)
-    (status, net_pretax, di, stage, gap, stime) = oorplp(dd, mode, objt, tout, glim)
+    (status, net_pretax, di, stage, gap, stime, iis_names) = oorplp(
+        dd, mode, objt, tout, glim, iis_prepare_cb=iis_prepare_cb,
+    )
     print('\n', flush=True)
     set_nut(dd, 'scip_status', status)
     set_nut(dd, 'scip_stage', stage)
@@ -645,7 +742,11 @@ def oorp(p, mode, objt, test, tout, glim, fname=None, warn_cb=None):
         print(f'FTAB: {net_pretax: 4.3f} DI 1st year: {di: 3.3f} Status: {status} at stage {stage} gap {100 * gap: 1.3f}% in {stime: 2.3f} s')
     else:
         print(f'Optimization failed, status {status} gap {100 * gap: 1.3f}% in {stime: 2.3f} s')
-    return (dd, status, net_pretax, di, stage, gap, stime)
+        if status == 'infeasible' and iis_names:
+            print('IIS constraint names (subset that cannot be satisfied together):', flush=True)
+            for n in iis_names:
+                print(f'  {n}', flush=True)
+    return (dd, status, net_pretax, di, stage, gap, stime, iis_names)
 
 
 def walk_lap(p, fromyear, mode, tout, glim, warn_cb=None):
@@ -655,7 +756,7 @@ def walk_lap(p, fromyear, mode, tout, glim, warn_cb=None):
     set_nut(dd, 'orp_objtv', objt)
     set_nut(dd, 'time_limit', tout)
     set_nut(dd, 'gap_limit', glim)
-    (status, net_pretax, di, stage, gap, stime) = oorplp(dd, mode, objt, tout, glim)
+    (status, net_pretax, di, stage, gap, stime, _iis) = oorplp(dd, mode, objt, tout, glim)
     print('\n', flush=True)
     set_nut(dd, 'scip_status', status)
     set_nut(dd, 'scip_stage', stage)
@@ -733,7 +834,7 @@ def three_peat(p, mode, tout, glim, fname, warn_cb=None):
     rs['TAB'][1] = dd['afterTax'][0] + dd['e_Taxd'][0] + dd['j_Taxd'][0] + dd['e_Roth'][0] + dd['j_Roth'][0]
     i = 0
     for year, row in hd[:].loc[historical_year_for_rates:historical_year_for_rates + len(dd['year']) - 2].iterrows():
-        (status, net_pretax, di, stage, gap, stime) = oorplp(dd, mode, objt, tout, glim)
+        (status, net_pretax, di, stage, gap, stime, _iis) = oorplp(dd, mode, objt, tout, glim)
         print('\n', flush=True)
         set_nut(dd, 'scip_status', status)
         set_nut(dd, 'scip_stage', stage)

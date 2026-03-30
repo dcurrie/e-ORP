@@ -9,7 +9,17 @@ When the SCIP MINLP solver reports **infeasibility**, the user currently gets no
 
 Background and references are in the vault research note: `research/e-ORP-MINLP-infeasibility-and-relaxation.md` (SCIP IIS vs MinUC, PySCIPopt gaps, constraint naming, `chgRhs`/`chgLhs`).
 
-**PySCIPopt version:** The plan is written for the current stack (e.g. pyscipopt 5.5.0 + SCIP 9), using a write → SCIP binary → parse workaround for IIS. If we upgrade to **PySCIPopt 6.x** (SCIP 10), Phase 2 can use the native **`model.generateIIS()`** API instead: no subprocess, no temp files; get conflicting constraint names from `iis.getSubscip().getConss()` and `cons.name`. See doc/ai/plans/notes_pyscipopt6_upgrade.md for tradeoffs.
+**PySCIPopt version:** e-ORP uses **PySCIPopt 6.x** (`pyscipopt>=6,<7`). Phase 2 uses **`model.generateIIS()`** in-process (no subprocess). See doc/ai/plans/notes_pyscipopt6_upgrade.md.
+
+**Implemented (branch `infeasibilty-reporting`):** Constraints are named `eorp_00001`, … via a local `add_cons` wrapper; Roth limit uses `eorp_rothlim_y{y}`. On infeasible, `generateIIS()` runs and names are returned through `oorp` → `render_dd` → desktop (`iis_report` item + SCIP log). Semantic names (plan §3.1) remain optional follow-up.
+
+**Large IIS in the UI:** A true IIS can still list **hundreds** of rows on multi-year models because feasibility is chained year-to-year. The desktop report explains this, shows the first ~45 names by default, puts the rest behind `<details>`, and offers **Copy all names** for grep / `.lp` cross-reference until semantic naming lands.
+
+**Thin semantic names (implemented):** `add_cons(expr, name=None)` in `solver.py`. High-signal constraints use stable names: `eorp_min_residual_final`; `eorp_spend_delta_y{y}`, `eorp_disp_from_disc_y{y}`; `eorp_fix_disp_y{y}` (net_pretax objective); `eorp_init_*_0`; `eorp_e_rmd_y{y}`, `eorp_j_rmd_y{y}`; `eorp_rothconv_*_le_taxd_y{y}`; `eorp_qcd_*_y{y}`; `eorp_disp_balance_y{y}`; `eorp_net_pretax_def_y{y}`; Roth cap disjunction remains `eorp_rothlim_y{y}`. All other rows stay sequential `eorp_NNNNN`.
+
+**IIS timing:** `iis/time` is set from the same **`tout`** as `limits/time` (seconds). If `tout <= 0`, IIS falls back to 300 s so it is not unbounded. `iis/silent` reduces log noise.
+
+**Desktop UI (Cocoa / pywebview):** While `generateIIS()` runs, the worker may hold the GIL for a long time; the 200 ms `poll_log` bridge calls Python on the **main** thread and can block repaints (beach ball) so the IIS warning appears only after IIS finishes. **Mitigation:** `window.__eorpPauseLogPoll` set in `iis_prepare_cb` (`backend.py`), honored in `startLogPolling` (`frontend/app.js`), cleared in `runFinished` / new run; brief `time.sleep(0.05)` in `solver.py` immediately before IIS so the UI can paint the “Computing IIS…” line.
 
 **Guiding principles:**
 

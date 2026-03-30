@@ -10,14 +10,18 @@ pd.options.display.max_columns = None
 pd.options.display.precision = 3
 
 
-def render_dd(dd, fname=None):
+def render_dd(dd, fname=None, iis_names=None):
     """
     Returns a list of output items for the frontend:
       {'type': 'plotly',  'json': <dict>}  # figure as dict (json.loads(fig.to_json()))
       {'type': 'table',   'html': <str>}
       {'type': 'heading', 'text': <str>}
+      {'type': 'iis_report', 'names': [<str>, ...]}  # infeasible IIS constraint names
     """
     items = []
+    if iis_names:
+        items.append({'type': 'heading', 'text': 'Infeasible — irreducible infeasible subsystem (IIS)'})
+        items.append({'type': 'iis_report', 'names': list(iis_names)})
     dfr = pd.DataFrame(dd, index=dd['year'])
     if fname:
         dfr.to_csv(fname)

@@ -51,6 +51,9 @@ function updateGlidePath() {
 function startLogPolling() {
   if (logInterval) clearInterval(logInterval);
   logInterval = setInterval(() => {
+    // While IIS runs, Python holds the GIL for a long time; skip poll_log so the main
+    // thread (Cocoa) can still paint the IIS warning instead of spinning.
+    if (window.__eorpPauseLogPoll) return;
     const api = getApi();
     if (!api) return;
     api.poll_log().then(text => {
@@ -69,6 +72,14 @@ function appendWarning(msg) {
   p.className = 'warning';
   p.textContent = msg;
   div.appendChild(p);
+}
+
+/** Called from Python when starting IIS after infeasible: clear warnings + SCIP log only. */
+function clearWarningsAndScipLogForIIS() {
+  const w = document.getElementById('warnings');
+  const log = document.getElementById('scip-log');
+  if (w) w.innerHTML = '';
+  if (log) log.textContent = '';
 }
 
 function renderResults(items) {
@@ -92,11 +103,89 @@ function renderResults(items) {
       titleEl.className = 'result-section-title';
       titleEl.textContent = (item.text || '').replace(/^\s*###\s*/, '');
       panel.appendChild(titleEl);
+    } else if (item.type === 'iis_report' && item.names && item.names.length) {
+      const IIS_PREVIEW = 45;
+      const names = item.names;
+      const total = names.length;
+      const wrap = document.createElement('div');
+      wrap.className = 'iis-report';
+
+      const intro = document.createElement('p');
+      intro.className = 'iis-intro';
+      intro.innerHTML =
+        '<strong>' + total + ' constraints</strong> appear in SCIP’s irreducible infeasible subsystem (IIS) for this run. ' +
+        'On a multi-year model, balances, RMDs, Roth limits, and tax brackets link across years, so the IIS is often ' +
+        '<em>large</em> even though it is “irreducible” (dropping any one listed constraint would leave a feasible relaxation). ' +
+        'Key constraints use readable names (e.g. <code>eorp_min_residual_final</code>, <code>eorp_disp_balance_y12</code>, <code>eorp_rothlim_y5</code>); the rest stay sequential <code>eorp_NNNNN</code>.';
+      wrap.appendChild(intro);
+
+      const hint = document.createElement('p');
+      hint.className = 'iis-hint';
+      hint.textContent =
+        'Try adjusting the tightest inputs first (spending floor, minimum residual, Roth conversion caps, charity/QCD, ages). ' +
+        'If the list is long, use Copy all names to search in solver source or an exported .lp file.';
+      wrap.appendChild(hint);
+
+      function appendNameLis(ul, arr) {
+        arr.forEach(n => {
+          const li = document.createElement('li');
+          li.textContent = n;
+          ul.appendChild(li);
+        });
+      }
+
+      const ulTop = document.createElement('ul');
+      ulTop.className = 'iis-list';
+      const shown = total <= IIS_PREVIEW ? names : names.slice(0, IIS_PREVIEW);
+      appendNameLis(ulTop, shown);
+      wrap.appendChild(ulTop);
+
+      if (total > IIS_PREVIEW) {
+        const more = document.createElement('p');
+        more.className = 'iis-more';
+        more.textContent = 'Showing first ' + IIS_PREVIEW + ' of ' + total + '.';
+        wrap.appendChild(more);
+        const det = document.createElement('details');
+        det.className = 'iis-details';
+        const sum = document.createElement('summary');
+        sum.textContent = 'Show remaining ' + (total - IIS_PREVIEW) + ' names';
+        const ulRest = document.createElement('ul');
+        ulRest.className = 'iis-list iis-list-rest';
+        appendNameLis(ulRest, names.slice(IIS_PREVIEW));
+        det.appendChild(sum);
+        det.appendChild(ulRest);
+        wrap.appendChild(det);
+      }
+
+      const copyRow = document.createElement('p');
+      copyRow.className = 'iis-copy-row';
+      const copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'iis-copy-btn';
+      copyBtn.textContent = 'Copy all names';
+      copyBtn.addEventListener('click', () => {
+        const text = names.join('\n');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => {
+            copyBtn.textContent = 'Copied';
+            setTimeout(() => { copyBtn.textContent = 'Copy all names'; }, 2000);
+          }).catch(() => {
+            appendWarning('Could not copy to clipboard.');
+          });
+        } else {
+          appendWarning('Clipboard API not available in this webview.');
+        }
+      });
+      copyRow.appendChild(copyBtn);
+      wrap.appendChild(copyRow);
+
+      panel.appendChild(wrap);
     }
   });
 }
 
 function runFinished() {
+  window.__eorpPauseLogPoll = false;
   const btn = document.getElementById('run-btn');
   if (btn) {
     btn.disabled = false;
@@ -138,6 +227,7 @@ function onRun() {
   document.getElementById('warnings').innerHTML = '';
   document.getElementById('scip-log').textContent = '';
   document.getElementById('results').innerHTML = '';
+  window.__eorpPauseLogPoll = false;
 
   const mode = parseInt(document.getElementById('nlpomode').value, 10);
   const testmode = parseInt(document.getElementById('testmode').value, 10);
