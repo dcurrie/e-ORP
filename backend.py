@@ -120,20 +120,23 @@ class Api:
     def get_hist_options(self):
         return {'min': int(min_hd_year), 'max': int(max_hd_year)}
 
-    def run_projection(self, mode, testmode, tout, glim, efname):
-        """Called from JS Run button. Returns immediately; work runs in thread."""
+    def run_projection(self, mode, testmode, tout, glim, efname, run_iis=False):
+        """Called from JS Run button. Returns immediately; work runs in thread.
+
+        run_iis: when True, if the solve is infeasible, run IIS (generateIIS); expensive.
+        """
         if self._running:
             return {'error': 'already running'}
         self._running = True
         t = threading.Thread(
             target=self._run_worker,
-            args=(int(mode), int(testmode), float(tout), float(glim), str(efname)),
+            args=(int(mode), int(testmode), float(tout), float(glim), str(efname), bool(run_iis)),
             daemon=True,
         )
         t.start()
         return {'ok': True}
 
-    def _run_worker(self, mode, testmode, tout, glim, efname):
+    def _run_worker(self, mode, testmode, tout, glim, efname, run_iis=False):
         def warn_cb(msg):
             self.window.evaluate_js(f'appendWarning({json.dumps(msg)})')
 
@@ -184,7 +187,8 @@ class Api:
                     glim,
                     fname=efname,
                     warn_cb=warn_cb,
-                    iis_prepare_cb=iis_prepare_cb,
+                    iis_prepare_cb=iis_prepare_cb if run_iis else None,
+                    run_iis=run_iis,
                 )
                 (dd, status, net_pretax, di, stage, gap, stime, iis_names) = result
                 items = render_dd(dd, efname, iis_names=iis_names)

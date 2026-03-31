@@ -139,17 +139,20 @@ def _iis_constraint_names_from_model(scip, tout):
         return None
 
 
-def oorplp(dd, mode, objective, tout, glim, iis_prepare_cb=None):
+def oorplp(dd, mode, objective, tout, glim, iis_prepare_cb=None, run_iis=False):
     """Run OORPyLP with specified objective, 'net_pretax', 'net_postax',
         or a non-string value for maximum DI with a specified residual.
 
     iis_prepare_cb: optional callable(seconds: float) invoked when status is
         infeasible, immediately before IIS generation (e.g. to refresh the UI).
 
+    run_iis: if True and status is infeasible, run ``generateIIS()`` (second solve,
+        can take up to ``tout``). If False, skip IIS and return ``iis_names=None``.
+
     Returns:
         (status, net_pretax, di, stage, gap, stime, iis_names)
         iis_names is a sorted list of constraint names in the IIS if status is
-        infeasible and IIS computation succeeds; otherwise None.
+        infeasible, ``run_iis`` is True, and IIS computation succeeds; otherwise None.
     """
     # mode: 0: default, 1: no capital losses 2: no capgains basis averaging 3: neither 4: full slow mode
     # the default mode 0 is the same as mode 3: neither capital losses nor cost basis averaging
@@ -593,23 +596,29 @@ def oorplp(dd, mode, objective, tout, glim, iis_prepare_cb=None):
 
     iis_names = None
     if status == 'infeasible': # and stage == 'SOLVED':
-        _tl = float(tout) if tout is not None else 300.0
-        if _tl <= 0:
-            _tl = 300.0
-        if iis_prepare_cb:
-            iis_prepare_cb(_tl)
+        if run_iis:
+            _tl = float(tout) if tout is not None else 300.0
+            if _tl <= 0:
+                _tl = 300.0
+            if iis_prepare_cb:
+                iis_prepare_cb(_tl)
+            else:
+                print(
+                    f'Computing IIS (irreducible infeasible subsystem); '
+                    f'time limit {_tl:g} s.\n',
+                    flush=True,
+                )
+            # Let the GUI thread repaint: poll_log + evaluate_js use the GIL; generateIIS()
+            # can hold it for a long time on some builds, which would block the main thread
+            # (Cocoa beach ball) if a timer still calls poll_log.
+            time.sleep(0.05)
+            # IIS is a second solve; use same time limit as main optimize (`tout`).
+            iis_names = _iis_constraint_names_from_model(scip, tout)
         else:
             print(
-                f'Computing IIS (irreducible infeasible subsystem); '
-                f'time limit {_tl:g} s.\n',
+                'Infeasible; IIS analysis skipped (enable IIS in Optimizer Controls to run it).\n',
                 flush=True,
             )
-        # Let the GUI thread repaint: poll_log + evaluate_js use the GIL; generateIIS()
-        # can hold it for a long time on some builds, which would block the main thread
-        # (Cocoa beach ball) if a timer still calls poll_log.
-        time.sleep(0.05)
-        # IIS is a second solve; use same time limit as main optimize (`tout`).
-        iis_names = _iis_constraint_names_from_model(scip, tout)
         # fudge
         dd['net_pretax'][YRS] = 0
         dd['disp_income'][1] = 0
@@ -723,7 +732,7 @@ def oorplp(dd, mode, objective, tout, glim, iis_prepare_cb=None):
 
 
 
-def oorp(p, mode, objt, test, tout, glim, fname=None, warn_cb=None, iis_prepare_cb=None):
+def oorp(p, mode, objt, test, tout, glim, fname=None, warn_cb=None, iis_prepare_cb=None, run_iis=False):
     """Run the projection; returns (dd, status, net_pretax, di, stage, gap, stime, iis_names)."""
     dd = make_planning_datadict(p, test_mode=test, warn_cb=warn_cb)
     set_nut(dd, 'orp_mode', mode)
@@ -731,7 +740,7 @@ def oorp(p, mode, objt, test, tout, glim, fname=None, warn_cb=None, iis_prepare_
     set_nut(dd, 'time_limit', tout)
     set_nut(dd, 'gap_limit', glim)
     (status, net_pretax, di, stage, gap, stime, iis_names) = oorplp(
-        dd, mode, objt, tout, glim, iis_prepare_cb=iis_prepare_cb,
+        dd, mode, objt, tout, glim, iis_prepare_cb=iis_prepare_cb, run_iis=run_iis,
     )
     print('\n', flush=True)
     set_nut(dd, 'scip_status', status)

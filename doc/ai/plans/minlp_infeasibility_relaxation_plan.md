@@ -17,6 +17,8 @@ Background and references are in the vault research note: `research/e-ORP-MINLP-
 
 **Thin semantic names (implemented):** `add_cons(expr, name=None)` in `solver.py`. High-signal constraints use stable names: `eorp_min_residual_final`; `eorp_spend_delta_y{y}`, `eorp_disp_from_disc_y{y}`; `eorp_fix_disp_y{y}` (net_pretax objective); `eorp_init_*_0`; `eorp_e_rmd_y{y}`, `eorp_j_rmd_y{y}`; `eorp_rothconv_*_le_taxd_y{y}`; `eorp_qcd_*_y{y}`; `eorp_disp_balance_y{y}`; `eorp_net_pretax_def_y{y}`; Roth cap disjunction remains `eorp_rothlim_y{y}`. All other rows stay sequential `eorp_NNNNN`.
 
+**IIS opt-in (desktop):** Checkbox **IIS if infeasible** in Optimizer Controls (default **off**). `run_projection(..., run_iis=False)` → `oorp(..., run_iis=...)` → `oorplp(..., run_iis=...)`. When off, infeasible runs skip `generateIIS()` and log one line; the UI shows infeasible status without an IIS list.
+
 **IIS timing:** `iis/time` is set from the same **`tout`** as `limits/time` (seconds). If `tout <= 0`, IIS falls back to 300 s so it is not unbounded. `iis/silent` reduces log noise.
 
 **Desktop UI (Cocoa / pywebview):** While `generateIIS()` runs, the worker may hold the GIL for a long time; the 200 ms `poll_log` bridge calls Python on the **main** thread and can block repaints (beach ball) so the IIS warning appears only after IIS finishes. **Mitigation:** `window.__eorpPauseLogPoll` set in `iis_prepare_cb` (`backend.py`), honored in `startLogPolling` (`frontend/app.js`), cleared in `runFinished` / new run; brief `time.sleep(0.05)` in `solver.py` immediately before IIS so the UI can paint the “Computing IIS…” line.

@@ -128,6 +128,17 @@ header .bridge-status.failed { color: #c00; }
   cursor: pointer;
 }
 
+.run-iis-option .checkbox-with-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+.run-iis-option .checkbox-with-hint input[type="checkbox"] {
+  margin: 0 0.4rem 0 0;
+  vertical-align: middle;
+}
+
 /* Form grids — wide layout with room for labels and explanatory text */
 .grid-2 {
   display: grid;

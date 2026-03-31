@@ -234,10 +234,12 @@ function onRun() {
   const tout = parseFloat(document.getElementById('tout').value) || 60;
   const glim = parseFloat(document.getElementById('glim').value) || 0;
   const efname = (document.getElementById('efname') && document.getElementById('efname').value) || '';
+  const runIisEl = document.getElementById('run-iis');
+  const run_iis = !!(runIisEl && runIisEl.checked);
 
   try {
     api.set_params(collectParams());
-    var p = api.run_projection(mode, testmode, tout, glim, efname);
+    var p = api.run_projection(mode, testmode, tout, glim, efname, run_iis);
     if (p && typeof p.then === 'function') {
       p.catch(function (e) { appendWarning('Run failed: ' + (e && (e.message || e.toString()))); runFinished(); });
     }
