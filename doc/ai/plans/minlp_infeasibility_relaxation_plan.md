@@ -1,5 +1,13 @@
 # e-ORP: MINLP infeasibility diagnostics and constraint relaxation
 
+> **Superseded by:** `elastic_infeasibility_diagnostics.md`.
+> The IIS approach implemented on branch `infeasibilty-reporting` (`32895ab`) is
+> withdrawn: a true IIS on this year-chained model lists hundreds of constraints,
+> `generateIIS()` holds the GIL and freezes the Cocoa main thread, and the IIS as
+> extracted omitted variable bounds — which turned out to be a real source of
+> spurious infeasibility. Kept from this plan: the `add_cons` constraint naming
+> (§3.1), which is now the substrate for the elastic-slack diagnostic.
+
 ## 1. Overview and goals
 
 When the SCIP MINLP solver reports **infeasibility**, the user currently gets no explanation. When the solve is **slow** (e.g. time limit hit), there is no way to explore relaxing constraints. This plan adds:

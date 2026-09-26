@@ -55,6 +55,52 @@ PARAM_DEFAULTS = {
     'hist':  'Use Values Below',
 }
 
+# Parameter types. These live here, beside PARAM_DEFAULTS, because all three front ends
+# need them: the desktop backend, the notebook (which must NOT import backend -- that
+# pulls in pywebview), and the benchmark harness.
+INT_PARAMS = {
+    'byear', 'aage1', 'aage2', 'fage1', 'fage2', 'refa1', 'refa2',
+    'reta1', 'reta2', 'page1', 'page2',
+    'yr01', 'yr02', 'yr03', 'yr04', 'yr05', 'yr06', 'yr07', 'yr08',
+    'fstat', 'glide', 'spndm', 'ssabr',
+    'pr01', 'pr02', 'pr03', 'pr04', 'pr05', 'pr06', 'pr07', 'pr08',
+    'popt1', 'popt2',
+}
+STR_PARAMS = {
+    'tx01', 'tx02', 'tx03', 'tx04', 'tx05', 'tx06', 'tx07', 'tx08',
+    'rothl', 'hist',
+}
+
+
+def coerce_param(key, val):
+    """Coerce one parameter to the type the model expects."""
+    if key in INT_PARAMS:
+        return int(float(val))
+    if key in STR_PARAMS:
+        return str(val)
+    return float(val)
+
+
+def params_from_csv(path_or_buf, warn_cb=None):
+    """Load a params CSV (file path or file-like) into a full params dict.
+
+    Keys absent from the file keep their PARAM_DEFAULTS value; keys absent from
+    PARAM_DEFAULTS are ignored, which is how legacy-format files silently load as
+    mostly-defaults -- see scripts/bench_sweep.py is_modern().
+    """
+    p = dict(PARAM_DEFAULTS)
+    ps = pd.read_csv(path_or_buf, index_col=0, keep_default_na=False)
+    col = ps.columns[0]
+    for key in PARAM_DEFAULTS:
+        if key in ps.index:
+            try:
+                p[key] = coerce_param(key, ps.loc[key, col])
+            except (TypeError, ValueError) as e:
+                if warn_cb:
+                    warn_cb(f'could not read {key}: {e}; keeping default {p[key]}')
+    return p
+
+
 # ##############      Tax Data       ##############
 
 # Income tax rates
@@ -220,7 +266,114 @@ def set_nut(dd, parm, val):
 
 def get_nut(dd, parm):
     return dd[squirrel_map[parm]][0]
-def make_planning_datadict(p, test_mode='', historical_year_for_rates=None, warn_cb=None):
+def best_growth(dd, y):
+    """The fastest any sleeve can compound in year y.
+
+    You cannot escape a sleeve's allocation within a year, but you CAN move money
+    between sleeves (Roth conversion, withdraw-and-redeposit), so the best of the
+    three is the right relaxation. Allocation fractions are taken over {y-1, y}
+    because returns for year y apply to year y-1 balances while the allocation
+    constraint uses year y fractions.
+    """
+    best = None
+    for s, b in (('frac_stock_a', 'frac_bonds_a'),
+                 ('frac_stock_r', 'frac_bonds_r'),
+                 ('frac_stock_d', 'frac_bonds_d')):
+        for ya in (max(0, y - 1), y):
+            r = dd['ror_stock'][y] * dd[s][ya] + dd['ror_bonds'][y] * dd[b][ya]
+            best = r if best is None else max(best, r)
+    return 1.0 + best
+
+
+def external_income(dd, y):
+    """Money entering the plan from outside in year y. Dividends are excluded -- they
+    are internal and already counted by best_growth()."""
+    return (dd['SSA_income'][y] + dd['pension_income'][y] + dd['misc_income'][y]
+            + dd['taxfree_income'][y] + dd['e_Taxd_in'][y] + dd['j_Taxd_in'][y])
+
+
+def asset_ceiling(dd):
+    """Per-year upper bound on total assets, ignoring all spending and tax.
+
+    Rigorous: balances compound no faster than the best sleeve return, only external
+    income adds to them, and spending, taxes, IRMAA and RMD forcing all subtract. Any
+    single account is therefore also bounded by this, since every balance is >= 0.
+
+    Used to size the solver's variable bounds (solver.oorplp) and, with spending
+    subtracted, by triage_feasibility() below.
+    """
+    YRS = len(dd['e']) - 1
+    w = (dd['afterTax'][0] + dd['e_Taxd'][0] + dd['j_Taxd'][0]
+         + dd['e_Roth'][0] + dd['j_Roth'][0])
+    out = [w]
+    for y in range(1, YRS + 1):
+        # max(...,1.0): a down year genuinely shrinks assets, but letting the ceiling
+        # fall would make it non-monotonic for no benefit. Conservative is safe here.
+        w = max(best_growth(dd, y), 1.0) * (w + external_income(dd, y))
+        out.append(w)
+    return out
+
+
+def triage_feasibility(dd, objective=0):
+    """Cheap arithmetic check for a plan that cannot work. Returns a list of messages.
+
+    No solver involved -- this runs in microseconds, before SCIP is asked to spend
+    seconds proving the same thing the hard way.
+
+    The ceiling W[y] is deliberately OPTIMISTIC, so a warning means the plan is
+    impossible even under assumptions kinder than the model's. Ignored here, and each
+    can only take money away: income and capital-gains tax, IRMAA, RMD forcing, the
+    tax-bracket and transfer bounds, Roth conversion limits, and charitable giving.
+    Balances are treated as fully liquid, income is granted a full year of growth, and
+    spending is deducted at year end.
+
+    Returns (messages, ceiling, required) so callers can report the headroom ratio.
+    """
+    YRS = len(dd['e']) - 1
+    msgs = []
+
+    w = (dd['afterTax'][0] + dd['e_Taxd'][0] + dd['j_Taxd'][0]
+         + dd['e_Roth'][0] + dd['j_Roth'][0])
+    broke_year = None
+    for y in range(1, YRS + 1):
+        # No max(growth, 1.0) floor here, unlike asset_ceiling(): pretending you could
+        # sit in cash through a bad year would inflate this ceiling badly and destroy
+        # its usefulness as a "this cannot work" test.
+        spend = dd['disp_income'][y] if isinstance(objective, str) else dd['spend_essence'][y]
+        w = best_growth(dd, y) * (w + external_income(dd, y)) - spend
+        if w < 0 and broke_year is None:
+            broke_year = dd['year'][y]
+
+    if broke_year is not None:
+        what = 'your stated spending' if isinstance(objective, str) else 'essential spending'
+        msgs.append(
+            f'This plan cannot work: {what} exhausts every account by {broke_year}, '
+            f'even with no discretionary spending, no taxes, and the best available '
+            f'rate of return. Reduce spending or shorten the plan.'
+        )
+
+    required = dd['surplus'][YRS]
+    # The minimum-residual constraint only exists when maximizing spend.
+    if not isinstance(objective, str) and required > 0 and broke_year is None:
+        ratio = (w / required) if required else float('inf')
+        # Calibrated against the 23 modern scenarios in params/ across both clones:
+        # every feasible one sits at 2.83x or higher, while params/_infeasible.csv --
+        # which SCIP proves infeasible -- sits at 1.74x. 2.0x separates them with
+        # margin on both sides. This is an advisory, not a verdict: the ceiling is
+        # loose by roughly 1.3-2.2x because it ignores tax, so a low ratio means
+        # "expect trouble", never "impossible".
+        if ratio < 2.0:
+            msgs.append(
+                f'Final-balance headroom is thin: an optimistic ceiling ignoring all '
+                f'taxes is ${w:,.0f}k against your required ${required:,.0f}k '
+                f'({ratio:.2f}x). Plans below about 2x usually prove infeasible once '
+                f'taxes, RMDs and IRMAA are modelled.'
+            )
+    return msgs, w, required
+
+
+def make_planning_datadict(p, test_mode='', historical_year_for_rates=None, warn_cb=None,
+                           objective=0):
     """Create the datadict to be used by OORPy, populated from params dict p."""
     def display_warning(msg):
         if warn_cb:
@@ -640,5 +793,11 @@ def make_planning_datadict(p, test_mode='', historical_year_for_rates=None, warn
     if test_mode == 'test_losses':
         for y in range(1,years,2):
             dd['ror_stock'][y] = -0.5 * dd['ror_stock'][y]
-    
+
+    # Last, so the triage sees the same rates and spending the solver will. Placed here
+    # rather than in solver.oorp so walk_lap and three_peat -- 10 and ~27 solves -- also
+    # get the warning before spending the time.
+    for msg in triage_feasibility(dd, objective=objective)[0]:
+        display_warning(msg)
+
     return dd
