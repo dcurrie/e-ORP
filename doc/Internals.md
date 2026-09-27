@@ -20,28 +20,37 @@ We set up PySCIPopt to maintain the model and either
 
 ## Code Organization
 
-The code is all on one (collapsed) Jupyter cell. This is primarily to reduce end user confusion by
-minimizing distractions, but it does make the code a bit daunting to read.
+The model is shared by the notebook and the desktop app, so both produce identical results:
 
-The code is organized into these sections:
-- Python Imports
-- Historical Data
+- `planner.py` — parameter defaults and types, Historical Data, Tax Data, and the Planning Data Dictionary
+- `solver.py` — The MINLP Optimization, the infeasibility diagnosis, and the `oorp` / `walk` / `three_peat` drivers
+- `renderer.py` — the plots and tables, as a list of result items
+
+Each front end is only a user interface over these. The notebook's UI code is on one (collapsed)
+Jupyter cell, to reduce end user confusion by minimizing distractions; the desktop app's is
+`backend.py` plus `frontend/` (see DESKTOP.md). A new kind of result item from `renderer.py` must be
+drawn in two places: `display_items` in `renderer.py` for the notebook, and `renderResults` in
+`frontend/app.js` for the desktop app.
+
+The notebook cell is organized into these sections:
+- Python Imports (including the shared model modules)
 - Output Widget declarations
 - Parameter Input Widgets
-- Tax Data
-- The Planning Data Dictionary
-- The MINLP Optimization
 - Controls and Outputs
 - User Control Widgets
+
+The sections below describe both the notebook cell and the shared modules.
 
 ### Python Imports
 
 This is just administrative stuff to import the libraries we use, such as `ipywidgets`, `pandas`, 
-`plotly.express`, `IPython`, `math`, `io`, `time`, and `pyscipopt`
+`IPython`, and `time`, and the shared `planner`, `solver`, and `renderer` modules. The notebook
+locates those modules from the directory Jupyter was started in (or one of its parents).
+`pyscipopt` is imported only by `solver.py`.
 
 ### Historical Data
 
-An external spreadsheet has the historical data gleaned from Robert J. Schiller's published databases and
+In `planner.py`. An external spreadsheet has the historical data gleaned from Robert J. Schiller's published databases and
 other public sources. This small section of code reads in the CSV file, and replicates it so that using a 
 starting year near the end of the data wraps around back to the beginning (1970).
 
@@ -62,12 +71,12 @@ for background or any possible workarounds.
 
 ### Tax Data
 
-It might have been prudent to have put all the statutory tax data in an external spreadsheet for easier
+In `planner.py`. It might have been prudent to have put all the statutory tax data in an external spreadsheet for easier
 maintenance, but the code evolved with the tax data inline here along with some supporting calculations. 
 
 ### The Planning Data Dictionary
 
-Once all the input parameters are set, the first step in the "projection" into the future is to construct 
+In `planner.py`. Once all the input parameters are set, the first step in the "projection" into the future is to construct 
 a data dictionary indexed by parameter and year. Essentially, anything that is preordained by the input 
 parameters is calculated in advance of the optimization phase in this data dictionary. This includes 
 some argument checking, and then year by year calculation of:
@@ -96,7 +105,7 @@ The Planning Data Dictionary is saved in a CSV file named by an input parameter.
 
 ### The MINLP Optimization
 
-The next section of code creates the "Mixed Integer Non-Linear Programming" Optimization model, and
+In `solver.py`, function `oorplp`. It creates the "Mixed Integer Non-Linear Programming" Optimization model, and
 calls the solver. Values in the Planning Data Dictionary that are malleable by the optimizer are
 created as shadow SCIP variables, often initialized from the Base Year values in the Planning Data 
 Dictionary. Other SCIP variables are created for intermediate calculations. 
@@ -110,14 +119,38 @@ We set some solvers parameters (see controls below), and then call the solver.
 Once done, we copy the relevant SCIP variables (the `OUTS`) back to the Planning Data Dictionary.
 Many of these are rounded to a dollar or so to make the output tables cleaner.
 
-The memory used by SCIP for the model is freed, and the status of the solution returned.
+The memory used by SCIP for the model is freed, and the status of the solution returned as a
+`SolveResult`. Its `ok()` is true only when the solver both stopped acceptably (optimal, or at the
+time or gap limit) and found a solution; a time limit reached before any solution is found is not
+a result.
+
+#### Infeasibility diagnosis
+
+When the solve is infeasible, `oorp` calls `diagnose_infeasible`, which re-solves a few cheap
+variants of the model (always in the fastest mode, with a short time limit and a 5% gap):
+
+1. With the variable limits (see Limits, below) relaxed 4x. If that solves, the limits — not the
+   user's inputs — were the cause, and the variables that exceeded them are reported.
+2. "Elastic" versions in which a non-negative slack variable is added to the user-controllable
+   constraints — the minimum residual, and the spending floor (or the fixed spending curve when
+   maximizing the Final Total Account Balance) — and the objective is replaced by minimizing the
+   inflation-deflated slack. The two families are relaxed separately, so each answers one question:
+   how far must the Plan Surplus drop, or how far must spending drop? Without `elastic`, the slack
+   terms are the literal `0.0`, so the normal model is unchanged.
+3. With the Roth conversion limit removed.
+
+`renderer.render_diagnosis` presents the result in place of the usual plots and tables.
+
+Separately, `planner.triage_feasibility` runs at the end of `make_planning_datadict` — before any
+solve — and warns when simple arithmetic shows a plan cannot work (essential spending exhausts every
+account even with no tax and the best available return), or when the final-balance headroom is thin.
 
 ### Controls and Outputs
 
 The Controls and Outputs section is a hodgepodge.
 
-There is a subsection for the creation of plots and tables. These are used by the functions that
-follow, which use the Planning Data Dictionary and MINLP Optimization in various ways depending on 
+The creation of plots and tables is in `renderer.py`. These are used by the driver functions in
+`solver.py`, which use the Planning Data Dictionary and MINLP Optimization in various ways depending on 
 the User Control Widgets, below.
 
 The functions implemented so far are the primary ORP optimization, `oorp`, the historical back test 
@@ -201,78 +234,99 @@ I suspect that any household in "the 1%" has a real financial advisor, and would
 a financial advisor on GitHub. So, the model limits are based on the top 1% values. For each year in the 
 model we'll adjust them by the input inflation factor. 
 
-For total account values, we'll use the biggest number in the tables above, $18,316,152.
-Since we don't want to limit the solver's flexibility in moving funds among the various 
-account buckets, we'll use the same number for all accounts.
-
-Roth Conversions are unlimited by law. So, we'll use the total account value limit despite the
-unlikelihood of ever coming close to that.
+These were the original limits, and the fixed figures below (IRMAA, dividends, the lower tax
+brackets) still come from this reasoning. The account limit no longer does; see *Account limit*.
 
 The IRS Uniform Life Table for RMD Calculations has a Distribution Period in Years of 6.0 for 
 age 101. That means the maximum RMD would be 1/6 of the total account value.
 
 Other account withdrawals are to cover necessary expenses, like taxes and IRMAA, and to make 
-disposable income. Can we all agree that $3MM a year is enough!? ;-)
+disposable income. These use the same 1/6 limit as RMDs. Note that this is a heuristic rather
+than a true bound, since a voluntary withdrawal could be a whole account; it can occasionally
+clip the optimum slightly.
 
 Dividends depend on the configured rate of return on bonds. Even at 12% we have less than 
 $500,000 on a maxed out after tax account.
 
 The maximum Social Security retirement benefit in 2025 is $5,108/month, $61,296 annually. 
-But taxable income also includes those age 101 RMDs... so we'll use double that value
-plus a fudge for dividends, Social Security income, and miscellaneous income.
+But taxable income also includes those age 101 RMDs... so we'll use 2.25 times the RMD limit
+as a fudge for dividends, Social Security income, and miscellaneous income.
 
-Income tax on that would be $2,187,171. Yikes!
+Income tax is limited to 37% of that.
 
 Individual tax brackets are limited by definition, except for the highest bracket for which
 we'll use the taxable income limit.
 
-Here are the limits scaled for `e-ORP` ($000):
+Roth Conversions are unlimited by law. So, we'll use the account limit despite the
+unlikelihood of ever coming close to that.
+
+The non-QCD part of charitable giving (`nQCD`) is not limited by statute, so it is limited
+only by the Charitable Contributions input.
+
+### Account limit
+
+The account limit, `max_tab`, is sized for each plan by `planner.asset_ceiling`. That is a
+per-year upper bound on total assets: balances cannot compound faster than the best rate of
+return available to any account, only external income (Social Security, pensions,
+miscellaneous and tax-free income, lump-sum pension deposits) adds to them, and spending, taxes
+and IRMAA only subtract. `max_tab` is the largest value of that ceiling in any year, deflated to
+the base year, and is never less than twice the starting total, nor less than the Plan Surplus (inflated to
+the final year).
+
+Earlier versions used the smaller of $18,316,152 (the "top 1%" figure above) and twice the
+starting total, indexed only to inflation. Because balances grow at the rate of return rather
+than inflation, that limit fell behind over long planning horizons and made some valid plans
+infeasible, and portfolios above $18.3M got a limit below their own opening balance.
+
+Here are the limits for `e-ORP` ($000). Each is multiplied by the inflation factor for the year,
+except `nQCD`, which follows the (already inflation-indexed) Charitable Contributions input:
 
 | model variable   | limit year 1 of plan |
 |      ---:        |                 ---: |
-| `afterTax`       |              18316.2 |
-| `aTax_basis`     |              18316.2 |
-| `e_Roth`         |              18316.2 |
-| `e_Taxd`         |              18316.2 |
-| `j_Roth`         |              18316.2 |
-| `j_Taxd`         |              18316.2 |
-| `net_pretax`     |              18316.2 |
-| `e_RothConv`     |              18316.2 |
-| `j_RothConv`     |              18316.2 |
-| `e_RMD`          |               3052.7 |
-| `j_RMD`          |               3052.7 |
-| `from_eRoth`     |               3052.7 |
-| `from_jRoth`     |               3052.7 |
-| `from_eTaxd`     |               3052.7 |
-| `from_jTaxd`     |               3052.7 |
-| `from_aTax`      |               3052.7 |
-| `to_aTax`        |               3052.7 |
-| `income_reqd`    |               6969.7 |
-| `auto_income`    |               6969.7 |
-| `taxable_income` |               6969.7 |
-| `MAGI`           |               6969.7 |
-| `capgains`       |               3052.7 |
-| `dividends`      |                500.0 |
-| `income_tax`     |               2187.2 |
-| `IRMAA`          |                 20.0 |
-| `taxb`           |                 20.0 |
-| `tax0`           |                 50.0 |
-| `tax1`           |                 30.0 |
-| `tax2`           |                 80.0 |
-| `tax3`           |                120.0 |
-| `tax4`           |                220.0 |
-| `tax5`           |                120.0 |
-| `tax6`           |                280.0 |
-| `tax7`           |               6969.7 |
-| `obbba_exc`      |               6969.7 |
-| `cgt0`           |                140.0 |
-| `cgt15`          |                 80.0 |
-| `cgt20`          |               6969.7 |
-| `ncgt0`          |                140.0 |
-| `ncgt15`         |                 80.0 |
-| `ncgt20`         |               6969.7 |
-| `QCD`            |                220.0 |
-| `nQCD`     c     |                220.0 |
+| `afterTax`       |       `max_tab` |
+| `aTax_basis`     |       `max_tab` |
+| `e_Roth`         |       `max_tab` |
+| `e_Taxd`         |       `max_tab` |
+| `j_Roth`         |       `max_tab` |
+| `j_Taxd`         |       `max_tab` |
+| `net_pretax`     |       `max_tab` |
+| `e_RothConv`     |       `max_tab` |
+| `j_RothConv`     |       `max_tab` |
+| `e_RMD`          |       `max_xfr` = `max_tab` / 6 |
+| `j_RMD`          |       `max_xfr` |
+| `from_eRoth`     |       `max_xfr` |
+| `from_jRoth`     |       `max_xfr` |
+| `from_eTaxd`     |       `max_xfr` |
+| `from_jTaxd`     |       `max_xfr` |
+| `from_aTax`      |       `max_xfr` |
+| `to_aTax`        |       `max_xfr` |
+| `disp_income`    |       `max_inc` = 2.25 × `max_xfr` |
+| `auto_income`    |       `max_inc` |
+| `taxable_income` |       `max_inc` |
+| `MAGI`           |       `max_inc` |
+| `capgains`       |       `max_xfr` |
+| `dividends`      |           500.0 |
+| `income_tax`     |       `max_tax` = 0.37 × `max_inc` |
+| `IRMAA`          |            34.0 |
+| `taxb`           |            20.0 |
+| `tax0`           |            50.0 |
+| `tax1`           |            30.0 |
+| `tax2`           |            80.0 |
+| `tax3`           |           120.0 |
+| `tax4`           |           220.0 |
+| `tax5`           |           120.0 |
+| `tax6`           |           280.0 |
+| `tax7`           |       `max_inc` |
+| `obbba_exc`      |       `max_inc` |
+| `cgt0`           |           140.0 |
+| `cgt15`          |            80.0 |
+| `cgt20`          |       `max_inc` |
+| `ncgt`           |       `max_inc` |
+| `QCD`            |           220.0 |
+| `nQCD`           | Charitable Contributions input |
+
+If a plan is infeasible only because of these limits, the infeasibility diagnosis detects it
+and says so (see *Infeasibility diagnosis*, above).
 
 ## Qualified Charitable Distributions (QCD)
 

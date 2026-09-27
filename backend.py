@@ -11,25 +11,14 @@ from io import StringIO
 import pandas as pd
 import webview
 
-from planner import make_planning_datadict, PARAM_DEFAULTS, min_hd_year, max_hd_year
+from planner import (make_planning_datadict, PARAM_DEFAULTS, coerce_param,
+                     min_hd_year, max_hd_year)
 
 # Resolve relative save/load paths against app directory (so params/_2025_2.csv works from any CWD)
 _APP_DIR = os.path.dirname(os.path.abspath(__file__))
 from solver import oorp, three_peat, walk
-from renderer import render_dd, render_three_peat
+from renderer import render_dd, render_diagnosis, render_three_peat
 
-_INT_PARAMS = {
-    'byear', 'aage1', 'aage2', 'fage1', 'fage2', 'refa1', 'refa2',
-    'reta1', 'reta2', 'page1', 'page2',
-    'yr01', 'yr02', 'yr03', 'yr04', 'yr05', 'yr06', 'yr07', 'yr08',
-    'fstat', 'glide', 'spndm', 'ssabr',
-    'pr01', 'pr02', 'pr03', 'pr04', 'pr05', 'pr06', 'pr07', 'pr08',
-    'popt1', 'popt2',
-}
-_STR_PARAMS = {
-    'tx01', 'tx02', 'tx03', 'tx04', 'tx05', 'tx06', 'tx07', 'tx08',
-    'rothl', 'hist',
-}
 
 
 class _QueueWriter:
@@ -53,11 +42,7 @@ class Api:
         self.window = None  # set by main.py after create_window
 
     def _coerce_one(self, key, val):
-        if key in _INT_PARAMS:
-            return int(float(val))
-        if key in _STR_PARAMS:
-            return str(val)
-        return float(val)
+        return coerce_param(key, val)
 
     def _coerce_types(self, d):
         return {k: self._coerce_one(k, v) for k, v in d.items()}
@@ -151,9 +136,22 @@ class Api:
             else:
                 objt = 'net_pretax' if testmode == 2 else 0
                 test = 'test_losses' if testmode == 1 else ''
-                result = oorp(self.params, mode, objt, test, tout, glim, fname=efname, warn_cb=warn_cb)
-                (dd, status, net_pretax, di, stage, gap, stime) = result
-                items = render_dd(dd, efname)
+                (dd, r) = oorp(
+                    self.params,
+                    mode,
+                    objt,
+                    test,
+                    tout,
+                    glim,
+                    fname=efname,
+                    warn_cb=warn_cb,
+                )
+                if r.status == 'infeasible':
+                    # dd is zeroed on infeasible; charting it and dumping it to efname
+                    # would be noise around the one thing worth reading.
+                    items = render_diagnosis(r.diagnosis)
+                else:
+                    items = render_dd(dd, efname)
 
             self.window.evaluate_js(f'renderResults({json.dumps(items)})')
         except Exception:

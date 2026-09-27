@@ -10,6 +10,41 @@ pd.options.display.max_columns = None
 pd.options.display.precision = 3
 
 
+def render_diagnosis(diag):
+    """Render an infeasibility diagnosis from solver.diagnose_infeasible().
+
+    Called instead of render_dd on infeasible runs: dd has been fudged to zeros by
+    then, so render_dd would draw fifteen charts of nothing around the answer.
+
+    Returns the same item types render_dd uses, plus {'type': 'note', 'text': ...}.
+    """
+    items = [{'type': 'heading', 'text': 'Infeasible — nothing satisfies this plan'}]
+    if not diag:
+        items.append({'type': 'note', 'text': 'No diagnosis was produced.'})
+        return items
+    items.append({'type': 'note', 'text': diag.get('headline', '')})
+    rows = diag.get('rows') or []
+    if rows:
+        cols = ['lever', 'year', 'shortfall_real', 'shortfall_nominal',
+                'current', 'suggested']
+        df = pd.DataFrame(rows)
+        df = df[[c for c in cols if c in df.columns]]
+        df = df.rename(columns={
+            'lever': 'Lever', 'year': 'Year',
+            'shortfall_real': 'Short by ($k, base-year)',
+            'shortfall_nominal': 'Short by ($k, nominal)',
+            'current': 'Current', 'suggested': 'Suggested',
+        })
+        items.append({'type': 'table',
+                      'html': df.to_html(classes='orp-table', border=0, index=False)})
+    if diag.get('approximate'):
+        items.append({'type': 'note',
+                      'text': 'A probe hit its time limit, so these figures are approximate.'})
+    for n in diag.get('notes') or []:
+        items.append({'type': 'note', 'text': n})
+    return items
+
+
 def render_dd(dd, fname=None):
     """
     Returns a list of output items for the frontend:
@@ -175,3 +210,25 @@ def render_three_peat(rf, sm):
     sm_df = pd.DataFrame([sm])
     items.append({'type': 'table', 'html': sm_df.to_html(classes='orp-table', border=0)})
     return items
+
+
+def display_items(items):
+    """Render render_dd()/render_diagnosis()/render_three_peat() items in a notebook.
+
+    The desktop front end ships these same items over the pywebview JSON bridge and
+    renders them in `app.js`. This is the Jupyter equivalent, so both front ends draw
+    from one definition of what a result looks like.
+    """
+    import plotly.io as pio
+    from IPython.display import display, HTML, Markdown
+
+    for item in items or []:
+        kind = item.get('type')
+        if kind == 'plotly':
+            display(pio.from_json(json.dumps(item['json'])))
+        elif kind == 'table':
+            display(HTML(item['html']))
+        elif kind == 'heading':
+            display(Markdown('### ' + (item.get('text') or '').lstrip('# ')))
+        elif kind == 'note':
+            display(Markdown((item.get('text') or '')))

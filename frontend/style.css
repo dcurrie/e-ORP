@@ -75,6 +75,18 @@ header .bridge-status.failed { color: #c00; }
   font-size: 0.9rem;
 }
 
+.diag-note {
+  margin: 0.35rem 0 0.75rem 0;
+  font-size: 0.95rem;
+  color: #333;
+  max-width: 60rem;
+}
+.diag-note:first-of-type {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: #8a3b00;
+}
+
 /* Form grids — wide layout with room for labels and explanatory text */
 .grid-2 {
   display: grid;

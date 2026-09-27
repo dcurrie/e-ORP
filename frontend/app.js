@@ -92,6 +92,11 @@ function renderResults(items) {
       titleEl.className = 'result-section-title';
       titleEl.textContent = (item.text || '').replace(/^\s*###\s*/, '');
       panel.appendChild(titleEl);
+    } else if (item.type === 'note') {
+      const p = document.createElement('p');
+      p.className = 'diag-note';
+      p.textContent = item.text || '';
+      panel.appendChild(p);
     }
   });
 }

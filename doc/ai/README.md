@@ -8,8 +8,18 @@ This repo's context overrides for project-specific decisions and structure.
 
 The e-ORP project is summarized for human users in the README and DESKTOP files in the project root.
 
-There are two e-ORP versions: notebook and desktop. 
-They are intended to produce identical results. 
+There are two e-ORP versions: notebook and desktop.
+They produce identical results because they run the **same model code**:
+`planner.py` (parameters, tax tables, the planning datadict), `solver.py` (the SCIP
+MINLP and the infeasibility diagnostics) and `renderer.py` (result items). Each front
+end is only a UI over those -- `e-ORP.ipynb` supplies ipywidgets, `backend.py` +
+`frontend/` supply the pywebview app. Keep it that way: model logic added to one front
+end and not the other is how the notebook silently acquired three defects before the
+duplication was removed (see doc/ai/plans/implemented/notebook_import_shared_modules.md).
+
+A result type added to `renderer.py` needs handling in two places: `renderResults` in
+`frontend/app.js` and `display_items` in `renderer.py`.
+
 The project is used to build both. 
 Both versions may be used locally. I usually use a Safari browser.
 The notebook version and repo structure are maintained so that it can be launched in Binder for non-developer use.
