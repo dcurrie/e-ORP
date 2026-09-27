@@ -832,6 +832,15 @@ def oorplp(dd, mode, objective, tout, glim, elastic=None, bounds_scale=1.0):
 DIAG_GLIM = 5.0
 BOUNDS_PROBE_SCALE = 4.0
 
+# As labelled in both front ends' Mode dropdowns.
+MODE_NAMES = {
+    0: 'Normal (fastest) Mode',
+    1: 'No Capital Losses',
+    2: 'No Basis Averaging',
+    3: 'No Losses nor Averaging',
+    4: 'Full (slowest) Mode',
+}
+
 
 def _diag_tout(tout):
     try:
@@ -848,6 +857,8 @@ def diagnose_infeasible(p, mode, objt, test, tout, ftab_input=None):
     own hand-tuned variable bounds to the user's plan is the worst thing this feature
     could do; running it first also means the elastic probes run at the shipped bounds,
     so a suggested ftab is achievable in the model the user will actually re-run.
+    For modes 1 and 4 a mode-0 baseline runs before it, so that probe changes only the
+    bounds relative to a solve already known to fail.
 
     Probes always build a fresh dd: oorplp() zeroes dd['net_pretax'][YRS] and
     dd['disp_income'][1] when infeasible, and dd['disp_income'] is a model *input*
@@ -864,9 +875,35 @@ def diagnose_infeasible(p, mode, objt, test, tout, ftab_input=None):
         return dd, oorplp(dd, pmode, objt, dtout, DIAG_GLIM,
                           elastic=elastic, bounds_scale=bounds_scale)
 
-    if mode != 0:
+    # Modes 0 and 3 build the same model (see oorplp), so only the others differ from
+    # the probe mode.
+    if mode not in (0, 3):
         notes.append('Diagnostic ran in simplified mode (no capital-loss harvesting, '
                      'no cost-basis averaging) so it stays fast.')
+
+    # 0. Is the user's mode the cause? Modes 1 and 4 require proportional basis
+    # withdrawals, which mode 0 drops, so a plan can fail in them and solve in mode 0.
+    # Without this baseline the 4x bounds probe below would change two things at once
+    # and report such a plan as an e-ORP bounds bug. (Mode 2 needs no baseline: mode 0
+    # only adds the no-capital-losses restriction to it, so it cannot be the looser.)
+    if mode in (1, 4):
+        print('Diagnosing infeasibility: checking the optimizer mode...', flush=True)
+        _dd, r = probe()
+        if r.ok():
+            return {
+                'kind': 'mode',
+                'headline': ('This plan is solvable in Normal (fastest) mode; the '
+                             f'capital-gains rules of {MODE_NAMES.get(mode, f"mode {mode}")} '
+                             'make it infeasible.'),
+                'rows': [],
+                'notes': [
+                    'Normal mode lets withdrawals from the after-tax account take gains '
+                    'and basis in any proportion, but does not use capital losses. Run '
+                    'in Normal mode, or change the plan so it no longer depends on that '
+                    'freedom.',
+                ],
+                'approximate': False,
+            }
 
     # 1. Are e-ORP's own variable bounds the cause?
     print('Diagnosing infeasibility: checking model bounds...', flush=True)

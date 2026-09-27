@@ -129,6 +129,10 @@ a result.
 When the solve is infeasible, `oorp` calls `diagnose_infeasible`, which re-solves a few cheap
 variants of the model (always in the fastest mode, with a short time limit and a 5% gap):
 
+0. Only when the user's mode is 1 or 4: the model as-is in mode 0. Mode 0 is not simply a
+   relaxation of those modes — it drops basis averaging but forbids capital losses — so if this
+   solves, the mode is reported as the cause. Otherwise step 1 would change the mode and the
+   limits at once, and could blame the limits for what the mode did.
 1. With the variable limits (see Limits, below) relaxed 4x. If that solves, the limits — not the
    user's inputs — were the cause, and the variables that exceeded them are reported.
 2. "Elastic" versions in which a non-negative slack variable is added to the user-controllable

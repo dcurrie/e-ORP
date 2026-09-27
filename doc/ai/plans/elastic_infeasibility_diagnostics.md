@@ -81,6 +81,7 @@ reported numbers well-defined and perturbs the slack sum by at most ~$4.
 
 ```
 0. main solve                                  -> infeasible
+0a. user mode 1 or 4? mode-0 solve feasible?   -> kind='mode'          STOP
 1. probe_bounds (scale 4, mode 0) feasible?    -> kind='bounds'        STOP
 2. probe A + probe B (scale 1, mode 0)
    2a. any slack > tol                         -> kind='elastic'       STOP
@@ -94,6 +95,12 @@ The bounds probe runs **first** for two reasons: mis-attributing a modeling arti
 the user's plan is this feature's worst failure mode, and running it first lets the
 elastic probes run at `bounds_scale=1.0`, so a suggested `ftab` is achievable in the
 model the user will actually re-run.
+
+Step 0a exists because probes run at mode 0, which is not a relaxation of every mode:
+it drops basis averaging (looser than modes 1 and 4) but forbids capital losses (tighter
+than modes 2 and 4). Without it, a plan failing only under mode 1 or 4 would pass the
+4x bounds probe and be reported as an e-ORP bug. Mode 2 needs no baseline -- mode 0 is
+strictly tighter than it -- and mode 3 is the same model as mode 0.
 
 Branch 2b is load-bearing: all-slacks-zero means the cause is in none of the user's
 dials. **Never return `diagnosis=None` on an infeasible status.**
@@ -120,7 +127,8 @@ always run at **mode 0** — modes 1/2/4 add the products and complementarity th
 the model slow, and the difference between modes is at most ~$1.1k/yr of tax, far inside
 projection noise. Caveat: mode 0 also sets `no_capital_losses`, which *restricts*, so it
 is not a pure relaxation; if every probe is infeasible at mode 0 and the user's mode is
-not 0, retry once at their mode. Every report carries a "ran in simplified mode" note.
+not 0, retry once at their mode. (Not implemented: such a plan currently gets
+`kind='inconclusive'`.) Every report carries a "ran in simplified mode" note.
 
 ## 7. Reporting
 

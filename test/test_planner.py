@@ -117,6 +117,27 @@ def test_bounds_probe_names_culprits():
           f"({sorted({c['var'] for c in r.bound_culprits})})")
 
 
+def test_diagnosis_blames_mode_not_bounds():
+    """A plan that fails only under the user's mode must not be reported as a bounds bug.
+
+    The probes run at mode 0, which drops basis averaging. Calling the diagnosis
+    directly on a plan that solves at mode 0 stands in for one that fails at mode 1/4
+    but not at mode 0: before the mode baseline, the 4x bounds probe solved and the
+    user was told e-ORP had a bug.
+    """
+    from solver import diagnose_infeasible
+    p = dict(PARAM_DEFAULTS)
+    for mode in (1, 4):
+        d = diagnose_infeasible(p, mode, 0, '', 5)
+        assert d['kind'] == 'mode', (mode, d)
+        assert 'Normal (fastest)' in d['headline'], d
+    # Mode 0 cannot be looser than mode 2, and modes 0 and 3 are identical, so none
+    # of these may take the mode branch.
+    for mode in (0, 2, 3):
+        assert diagnose_infeasible(p, mode, 0, '', 5)['kind'] != 'mode', mode
+    print("test_diagnosis_blames_mode_not_bounds: OK")
+
+
 def test_render_diagnosis():
     from renderer import render_diagnosis
     diag = {
@@ -200,6 +221,7 @@ if __name__ == '__main__':
     test_example_p_solves()
     test_asset_ceiling_bounds_every_balance()
     test_bounds_probe_names_culprits()
+    test_diagnosis_blames_mode_not_bounds()
     test_render_diagnosis()
     test_triage_no_false_positives()
     test_triage_catches_impossible_spending()

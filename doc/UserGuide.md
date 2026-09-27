@@ -449,6 +449,9 @@ constraints you control relaxed, one at a time, and reports which one is short a
 
 The diagnosis may instead say:
 
+- the plan is solvable in **Normal (fastest) mode**, and the capital-gains rules of the mode you
+  chose are what make it infeasible (only for the *No Capital Losses* and *Full* modes, which
+  use basis averaging); or
 - the **Roth conversion limit** is what makes the plan infeasible; or
 - it looks like **a bug in `e-ORP`**, not a problem with your plan — the plan became solvable when the
   model's internal limits on variables were relaxed. Please report the scenario (save the parameters to
