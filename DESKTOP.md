@@ -79,9 +79,10 @@ Or run each module separately:
 ./ORPy-venv/bin/python test/test_backend.py
 ```
 
-- **test_planner.py** — planner datadict and a short solver run (oorp).
+- **test_planner.py** — planner datadict, short solver runs (oorp), the infeasibility diagnosis on `params/infeasible.csv`, the account-limit sizing, and the pre-solve feasibility check.
 - **test_backend.py** — API param CSV round-trip (clipboard, file, and relative path like `params/file.csv`).
 - **test_frontend_api_adapter.py** — cross-platform bridge adapter (snake_case vs camelCase).
+- **test_notebook.py** — checks that `e-ORP.ipynb` imports the shared model rather than carrying its own copy. Its widget round-trip test needs ipywidgets (`requirements-notebook.txt`) and is skipped without it.
 
 Optional: with Node installed, `node test/frontend_api_adapter_test.js` runs the same adapter logic in JS.
 

@@ -30,7 +30,7 @@ the goal is identifying the key levers.
 
 | Case | Result |
 |---|---|
-| `params/_infeasible.csv` main solve | `infeasible` in 0.11 s, cut off at the root node |
+| `params/infeasible.csv` main solve | `infeasible` in 0.11 s, cut off at the root node |
 | Feasibility frontier (bisected) | max attainable nominal residual ≈ 2432.6 vs required 5120.66 |
 | Correct diagnosis | residual target ≈ $1,575k (base-year) too high; 3000 → ≈1425 |
 | Relaxed re-solve, mode 0 | ≈ 0.1 s |
@@ -173,7 +173,7 @@ Reproduce with:
 
 ### The diagnostic reproduces the hand-measured frontier
 
-`params/_infeasible.csv`: the elastic probe reports the residual target is **$1,575.7k**
+`params/infeasible.csv`: the elastic probe reports the residual target is **$1,575.7k**
 (base-year) too high. An independent bisection of SCIP's true feasibility frontier put
 it at $1,574.9k. The whole diagnosis runs in well under a second.
 
@@ -237,6 +237,6 @@ successful `FTAB:` line while `render_dd` charted it. `SolveResult.has_solution`
 
 The optimistic ceiling is loose by roughly 1.3–2.2x because it ignores all tax. Across
 the 23 modern scenarios, every feasible plan sits at 2.83x headroom or better while
-`_infeasible.csv` sits at 1.74x, so the advisory threshold is set at 2.0x. Zero hard
+`infeasible.csv` sits at 1.74x, so the advisory threshold is set at 2.0x. Zero hard
 warnings fire on the corpus; the advisory fires on exactly one scenario, the one SCIP
 proves infeasible.

@@ -41,14 +41,14 @@ def test_oorp_short():
 def test_elastic_infeasible_residual():
     """The exit criterion the IIS work never met: a real infeasibility, diagnosed.
 
-    params/_infeasible.csv asks for a $3M terminal residual against modest balances.
+    params/infeasible.csv asks for a $3M terminal residual against modest balances.
     The measured feasibility frontier is ~2432.6 nominal against a required 5120.66,
     so the residual is short by ~1575 base-year $k. Asserted loosely: the frontier
     moves whenever the tax tables change, but the sign, the lever and the order of
     magnitude are invariants.
     """
     from solver import oorp
-    p = _load_params('_infeasible.csv')
+    p = _load_params('infeasible.csv')
     dd, r = oorp(p, mode=0, objt=0, test='', tout=5, glim=0.02, fname=None,
                  warn_cb=lambda m: None)
     assert r.status == 'infeasible', r.status
@@ -59,6 +59,10 @@ def test_elastic_infeasible_residual():
     assert rows[0]['shortfall_real'] > 0
     assert 1000.0 < rows[0]['shortfall_real'] < 2500.0, rows[0]
     assert 0.0 < rows[0]['suggested'] < rows[0]['current'], rows[0]
+    # current/suggested are in the units the user typed (base-year $), not the
+    # final-year nominal target: a regression here once reported 5120.7 -> 3545.0.
+    assert rows[0]['current'] == p['ftab'], rows[0]
+    assert abs(rows[0]['suggested'] - (p['ftab'] - rows[0]['shortfall_real'])) < 0.2, rows[0]
     print("test_elastic_infeasible_residual: OK")
 
 
@@ -179,10 +183,10 @@ def test_triage_catches_impossible_spending():
 
 
 def test_triage_advisory_on_infeasible():
-    """params/_infeasible.csv is infeasible for reasons arithmetic cannot prove, but
+    """params/infeasible.csv is infeasible for reasons arithmetic cannot prove, but
     its final-balance headroom is thin enough to warn about."""
     from planner import triage_feasibility
-    dd = make_planning_datadict(_load_params('_infeasible.csv'), warn_cb=lambda m: None)
+    dd = make_planning_datadict(_load_params('infeasible.csv'), warn_cb=lambda m: None)
     msgs, w, req = triage_feasibility(dd)
     assert any('headroom' in m for m in msgs), (msgs, w, req)
     assert w > req, 'ceiling must stay a genuine upper bound'

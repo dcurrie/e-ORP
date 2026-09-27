@@ -357,7 +357,7 @@ def triage_feasibility(dd, objective=0):
     if not isinstance(objective, str) and required > 0 and broke_year is None:
         ratio = (w / required) if required else float('inf')
         # Calibrated against the 23 modern scenarios in params/ across both clones:
-        # every feasible one sits at 2.83x or higher, while params/_infeasible.csv --
+        # every feasible one sits at 2.83x or higher, while params/infeasible.csv --
         # which SCIP proves infeasible -- sits at 1.74x. 2.0x separates them with
         # margin on both sides. This is an advisory, not a verdict: the ceiling is
         # loose by roughly 1.3-2.2x because it ignores tax, so a low ratio means

@@ -978,7 +978,9 @@ def oorp(p, mode, objt, test, tout, glim, fname=None, warn_cb=None, diagnose=Tru
     set_nut(dd, 'orp_objtv', objt)
     set_nut(dd, 'time_limit', tout)
     set_nut(dd, 'gap_limit', glim)
-    ftab_input = dd['surplus'][len(dd['e']) - 1]
+    # The user's entry, in base-year $ -- the same units as the diagnosis's
+    # shortfall_real. dd['surplus'][YRS] is that entry inflated to the final year.
+    ftab_input = p.get('ftab')
     r = oorplp(dd, mode, objt, tout, glim)
     print('\n', flush=True)
     set_nut(dd, 'scip_status', r.status)

@@ -4,7 +4,10 @@
 
 `e-ORP` is implemented in a Jupyter notebook. The notebook has two cells. The top one is
 simply an intro to `e-ORP` presenting some simple instructions and a link to this User Guide.
-The bottom cell is hidden by default; it has all the Python code that runs the `e-ORP` solver.
+The bottom cell is hidden by default; it has the Python code for the user interface. The
+model and solver themselves live in `planner.py`, `solver.py`, and `renderer.py` alongside
+the notebook (the same code the desktop app runs), so start Jupyter from the project
+directory — `make run` and Binder both do.
 
 The user interface is started with the ▶ run button in the ribbon on the top of the `e-ORP` 
 Jupyter notebook. Running the top cell does nothing special (it transitions from edit to 
@@ -182,7 +185,7 @@ levels of affluence affect spending patterns. So, the *Spending $* input is used
 counterproductive to use for normal spending since the point of the optimization is to maximize disposable income.
 The intended use of `e-ORP` is to provide an optimal (maximum) spending limit for you to compare with your desired 
 spending level. Using an essential spending amount may make the optimization fail ("infeasible" in linear programming
-optimization terminology).
+optimization terminology). See [When a Plan is Infeasible](#when-a-plan-is-infeasible) for what `e-ORP` reports then.
 
 Nevertheless, there may be periods of your retirement plan where spending is known to exceed the usual pattern, or when
 you plan to make a major purchase, and using the Essential Spending and Extraordinary Expenses feature provides a means 
@@ -350,11 +353,15 @@ a means to get a solution that is close to optimal in a shorter time.
 The *Gap Goal on Solver* is a percentage. You can think of it roughly as: how close to optimal are you willing
 to settle for? Often the solver can get to within a fraction of a percentage of optimal and then get stuck.
 Technically, the gap is the relative difference between the primal and dual bounds of the optimizer: the 
-solution is known to be between these bounds. By default this gap is set to zero to obtain an optimal
-solution.
+solution is known to be between these bounds. By default this gap is set to 0.25%. Across the test
+scenarios this cost at most about 0.2% of disposable income compared to a proven optimum, while solving
+more than ten times faster. That 0.2% is far smaller than the uncertainty in any forecast of returns or inflation.
+Set it to zero if you want the solver to prove optimality, at the cost of much longer runs.
 
-The *Time Limit on Solver* will stop the solver after the specified number of seconds. At that point `e-ORP`
-will report the last potential solution found and the remaining primal and dual bounds gap. 
+The *Time Limit on Solver* will stop the solver after the specified number of seconds (60 by default).
+At that point `e-ORP` will report the last potential solution found and the remaining primal and dual
+bounds gap. If the solver had not yet found any solution when it stopped, `e-ORP` says so instead of
+reporting one; raise the time limit or the gap goal and run again.
 
 The *Test* dropdown is for developers to exercise `e-ORP` modes for stressing the code or testing out new
 features. You should leave it set to *Normal Mode* or suffer the consequences!
@@ -419,6 +426,37 @@ negative rates of return introduced by Monte Carlo or 3-PEAT, if/when these are 
 
 The disposable income `DI` 
 is the sum of the columns: `fixed_income`, `withdrawals`, `transfers`, `IRMAA`, and `income_tax`.
+
+### When a Plan is Infeasible
+
+Sometimes no plan can satisfy all of your inputs at once — for example, a Plan Surplus or an essential
+spending level that your accounts cannot fund. The solver calls this "infeasible."
+
+Before the solver runs, `e-ORP` does a quick arithmetic check. If your essential spending would exhaust
+every account even with no taxes and the best available rate of return, it warns you that the plan cannot
+work. It also warns when the required Plan Surplus leaves thin headroom — an advisory that the plan will
+probably prove infeasible, not a verdict.
+
+If the solver does report the plan infeasible, `e-ORP` shows a diagnosis in place of the usual charts and
+tables (no Planning Data Dictionary CSV file is written for an infeasible run). It re-solves with the
+constraints you control relaxed, one at a time, and reports which one is short and by how much:
+
+- **Minimum residual (Plan Surplus)** — the table's *Current* column is your Plan Surplus and
+  *Suggested* is the largest Plan Surplus the plan can support. Both are in Base Year dollars ($000s),
+  the units you enter.
+- **Spending** — the years in which your essential spending (or, when maximizing the Final Total Account
+  Balance, your stated spending) exceeds what the plan can fund, and by how much.
+
+The diagnosis may instead say:
+
+- the **Roth conversion limit** is what makes the plan infeasible; or
+- it looks like **a bug in `e-ORP`**, not a problem with your plan — the plan became solvable when the
+  model's internal limits on variables were relaxed. Please report the scenario (save the parameters to
+  a file and attach it); or
+- **no single input explains it**, in which case the likeliest inputs to adjust are listed.
+
+The diagnosis always runs in the fastest optimizer mode, so when you use another mode the figures are
+approximate. It typically takes about a second.
 
 ## Printing and Accessing Output Data
 

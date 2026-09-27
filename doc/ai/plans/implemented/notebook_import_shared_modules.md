@@ -32,7 +32,7 @@ for drawing the shared item list in Jupyter, and `planner.coerce_param` /
 pywebview). `test/test_notebook.py` guards against the duplication returning.
 
 **Verified:** loading each of `params/_2025_2.csv`, `example_l.csv`, `example_p.csv` and
-`_infeasible.csv` through the notebook's own Load button yields a params dict identical
+`infeasible.csv` through the notebook's own Load button yields a params dict identical
 to `params_from_csv`, and the resulting projections match the old notebook exactly —
 except `example_p.csv`, which the old notebook reported as infeasible and which now
 solves (see the `max_tab` fix in `elastic_infeasibility_diagnostics.md`).
