@@ -928,45 +928,77 @@ def diagnose_infeasible(p, mode, objt, test, tout, ftab_input=None):
         }
     notes.append('Model upper bounds were checked and are not the cause.')
 
-    # 2. Which user dial is short, and by how much? Two independent questions.
-    rows = []
+    # 2. Which user dial is short, and by how much? Two independent questions, so each
+    # answer is reported as a separate option: either one alone makes the plan work.
+    options = []
     approximate = False
-    probes = [('residual', 'Minimum residual (Plan Surplus)', 'ftab'),
-              ('spending', 'Spending', None)]
     if isinstance(objt, str):
-        probes = [('spending', 'Stated spending', None)]   # no residual constraint here
+        # No residual constraint here; the pinned spending curve is the input.
+        probes = [('spending', 'Stated spending', 'disp_income')]
+    else:
+        probes = [('residual', 'Minimum residual (Plan Surplus)', None),
+                  ('spending', 'Essential spending', 'spend_essence')]
 
-    for tag, label, param in probes:
+    for tag, label, spend_col in probes:
         print(f'Diagnosing infeasibility: testing {label.lower()}...', flush=True)
         dd, r = probe(elastic=tag)
-        if not r.ok():
+        if not r.ok() or not r.slacks:
             continue
         if r.status == 'timelimit':
             approximate = True
         infl = get_nut(dd, 'inflation')
-        YRS = len(dd['e']) - 1
-        for (_tag, y), val in sorted(r.slacks.items(), key=lambda kv: -kv[1]):
-            real = val * ((1.0 + infl) ** (-y))
+        # oorplp overwrites dd's outputs, and disp_income is one of them, so read the
+        # user's spending from an unsolved copy.
+        ref = fresh() if spend_col else None
+        rows = []
+        for (_tag, y), val in sorted(r.slacks.items(), key=lambda kv: kv[0][1]):
+            dfl = (1.0 + infl) ** (-y)
+            real = val * dfl
             row = {'lever': label, 'year': int(dd['year'][y]),
                    'shortfall_real': round(real, 1),
                    'shortfall_nominal': round(val, 1)}
-            if param == 'ftab' and ftab_input is not None:
-                row['param'] = 'ftab'
-                row['current'] = round(float(ftab_input), 1)
-                row['suggested'] = round(max(0.0, float(ftab_input) - real), 1)
+            if tag == 'residual':
+                if ftab_input is not None:
+                    row['param'] = 'ftab'
+                    row['current'] = round(float(ftab_input), 1)
+                    row['suggested'] = round(max(0.0, float(ftab_input) - real), 1)
+            else:
+                # Base-year $, like the essential-spending amounts the user enters.
+                cur = ref[spend_col][y] * dfl
+                row['current'] = round(cur, 1)
+                row['suggested'] = round(max(0.0, cur - real), 1)
             rows.append(row)
-
-    if rows:
-        top = rows[0]
-        if top.get('param') == 'ftab':
-            headline = (f"Minimum residual is about ${top['shortfall_real']:,.0f}k "
-                        f"(base-year $) too high.")
+        total = sum(row['shortfall_real'] for row in rows)
+        if tag == 'residual':
+            opt = {'lever': label, 'rows': rows, 'total_real': total,
+                   'title': 'lower the Plan Surplus',
+                   'summary': f'lower the Plan Surplus by about ${total:,.0f}k'}
         else:
-            headline = (f"Spending in {top['year']} exceeds what the plan can fund by "
-                        f"about ${top['shortfall_real']:,.0f}k (base-year $).")
+            n = len(rows)
+            span = f"in {rows[0]['year']}" if n == 1 else f'in total over {n} years'
+            opt = {'lever': label, 'rows': rows, 'total_real': total,
+                   'title': f'reduce {label.lower()}',
+                   'summary': f'cut {label.lower()} by about ${total:,.0f}k {span}',
+                   # The probe minimizes the total, which piles the cut into a few years
+                   # at their cap; other spreads work too, so only the total is firm.
+                   'note': ('This is one way to spread the cut across years, not the only '
+                            'one; the total is the reliable figure.') if n > 1 else None}
+        options.append(opt)
+
+    if options:
+        if len(options) == 1 and options[0]['rows'][0].get('param') == 'ftab':
+            headline = (f"Minimum residual is about ${options[0]['total_real']:,.0f}k "
+                        f"(base-year $) too high.")
+        elif len(options) == 1:
+            headline = (f"The plan cannot fund your {options[0]['lever'].lower()}: "
+                        f"{options[0]['summary']} (base-year $).")
+        else:
+            headline = ('Either ' + ', or '.join(o['summary'] for o in options)
+                        + ' (base-year $).')
         return {'kind': 'elastic', 'headline': headline,
-                'rows': rows[:10],
-                'notes': notes + ([f'...and {len(rows) - 10} more years.'] if len(rows) > 10 else []),
+                'rows': [row for o in options for row in o['rows']],
+                'options': options,
+                'notes': notes,
                 'approximate': approximate}
 
     # 3. Nothing in the user's dials. Structural?

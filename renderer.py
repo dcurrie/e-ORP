@@ -17,32 +17,48 @@ def render_diagnosis(diag):
     then, so render_dd would draw fifteen charts of nothing around the answer.
 
     Returns the same item types render_dd uses, plus {'type': 'note', 'text': ...}.
+
+    An elastic diagnosis carries `options`: independent alternatives, each of which
+    alone makes the plan feasible. Each gets its own table so they cannot be read as
+    shortfalls to be added together.
     """
     items = [{'type': 'heading', 'text': 'Infeasible — nothing satisfies this plan'}]
     if not diag:
         items.append({'type': 'note', 'text': 'No diagnosis was produced.'})
         return items
     items.append({'type': 'note', 'text': diag.get('headline', '')})
-    rows = diag.get('rows') or []
-    if rows:
-        cols = ['lever', 'year', 'shortfall_real', 'shortfall_nominal',
-                'current', 'suggested']
-        df = pd.DataFrame(rows)
-        df = df[[c for c in cols if c in df.columns]]
-        df = df.rename(columns={
-            'lever': 'Lever', 'year': 'Year',
-            'shortfall_real': 'Short by ($k, base-year)',
-            'shortfall_nominal': 'Short by ($k, nominal)',
-            'current': 'Current', 'suggested': 'Suggested',
-        })
-        items.append({'type': 'table',
-                      'html': df.to_html(classes='orp-table', border=0, index=False)})
+    options = diag.get('options')
+    if options:
+        for i, opt in enumerate(options, 1):
+            if len(options) > 1:
+                items.append({'type': 'note', 'text': f"Option {i}: {opt['title']}"})
+            items.append(_diagnosis_table(opt['rows']))
+            if opt.get('note'):
+                items.append({'type': 'note', 'text': opt['note']})
+    elif diag.get('rows'):
+        items.append(_diagnosis_table(diag['rows']))
     if diag.get('approximate'):
         items.append({'type': 'note',
                       'text': 'A probe hit its time limit, so these figures are approximate.'})
     for n in diag.get('notes') or []:
         items.append({'type': 'note', 'text': n})
     return items
+
+
+def _diagnosis_table(rows):
+    cols = ['lever', 'year', 'shortfall_real', 'shortfall_nominal',
+            'current', 'suggested']
+    df = pd.DataFrame(rows)
+    df = df[[c for c in cols if c in df.columns]]
+    df = df.rename(columns={
+        'lever': 'Lever', 'year': 'Year',
+        'shortfall_real': 'Short by ($k, base-year)',
+        'shortfall_nominal': 'Short by ($k, nominal)',
+        'current': 'Current', 'suggested': 'Suggested',
+    })
+    # na_rep: a row type without current/suggested shows blanks, never "NaN".
+    return {'type': 'table',
+            'html': df.to_html(classes='orp-table', border=0, index=False, na_rep='')}
 
 
 def render_dd(dd, fname=None):

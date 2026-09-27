@@ -444,8 +444,14 @@ constraints you control relaxed, one at a time, and reports which one is short a
 - **Minimum residual (Plan Surplus)** — the table's *Current* column is your Plan Surplus and
   *Suggested* is the largest Plan Surplus the plan can support. Both are in Base Year dollars ($000s),
   the units you enter.
-- **Spending** — the years in which your essential spending (or, when maximizing the Final Total Account
-  Balance, your stated spending) exceeds what the plan can fund, and by how much.
+- **Essential spending** (or, when maximizing the Final Total Account Balance, **Stated spending**) —
+  every year in which spending must be cut, with the total cut in the headline. *Current* is your
+  spending in that year and *Suggested* is what the plan can fund, in Base Year dollars. The cut is
+  often concentrated in a few years; that is one way to spread it, not the only one, so treat the
+  total as the reliable figure.
+
+When both are short, they are shown as separate options: **either** lower the Plan Surplus **or**
+cut spending. Either one alone makes the plan solvable; you do not need to do both.
 
 The diagnosis may instead say:
 

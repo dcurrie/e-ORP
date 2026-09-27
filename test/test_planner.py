@@ -117,6 +117,42 @@ def test_bounds_probe_names_culprits():
           f"({sorted({c['var'] for c in r.bound_culprits})})")
 
 
+def test_elastic_mixed_options():
+    """Residual and spending shortfalls are alternatives, reported as separate options.
+
+    infeasible.csv with a smaller Plan Surplus and $60k/yr of essential spending can be
+    fixed by either lever alone. They used to share one table, which read as additive,
+    showed NaN in the spending rows' Current/Suggested, and kept only the ten largest
+    rows, so some affected years silently went missing.
+    """
+    from renderer import render_diagnosis
+    from solver import oorp
+    p = _load_params('infeasible.csv')
+    p.update({'ftab': 1200.0, 'yr01': p['byear'] + 1, 'pr01': 1, 'va01': 60.0})
+    dd, r = oorp(p, mode=0, objt=0, test='', tout=5, glim=0.25, fname=None,
+                 warn_cb=lambda m: None)
+    d = r.diagnosis
+    assert d['kind'] == 'elastic', d
+    opts = d['options']
+    assert [o['lever'] for o in opts] == ['Minimum residual (Plan Surplus)',
+                                          'Essential spending'], opts
+    assert d['headline'].startswith('Either '), d['headline']
+    spend = opts[1]['rows']
+    assert [x['year'] for x in spend] == sorted(x['year'] for x in spend)
+    for x in spend:
+        # base-year $, the units the user entered, and never cut below zero
+        assert abs(x['current'] - 60.0) < 0.2, x
+        assert abs(x['suggested'] - max(0.0, x['current'] - x['shortfall_real'])) < 0.2, x
+    assert abs(opts[1]['total_real'] - sum(x['shortfall_real'] for x in spend)) < 0.01
+    assert len(d['rows']) == 1 + len(spend), 'rows must not be truncated'
+    items = render_diagnosis(d)
+    tables = [i for i in items if i['type'] == 'table']
+    assert len(tables) == 2
+    assert not any('NaN' in t['html'] for t in tables)
+    assert any(i['type'] == 'note' and i['text'].startswith('Option 2') for i in items)
+    print(f"test_elastic_mixed_options: OK ({len(spend)} spending years)")
+
+
 def test_diagnosis_blames_mode_not_bounds():
     """A plan that fails only under the user's mode must not be reported as a bounds bug.
 
@@ -221,6 +257,7 @@ if __name__ == '__main__':
     test_example_p_solves()
     test_asset_ceiling_bounds_every_balance()
     test_bounds_probe_names_culprits()
+    test_elastic_mixed_options()
     test_diagnosis_blames_mode_not_bounds()
     test_render_diagnosis()
     test_triage_no_false_positives()
