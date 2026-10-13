@@ -2,6 +2,7 @@
 # Copyright (c) 2020-5 Doug Currie
 
 import os
+import datetime
 import threading
 import queue
 import sys
@@ -39,6 +40,7 @@ class Api:
         self.params = dict(PARAM_DEFAULTS)
         self._log_queue = queue.Queue()
         self._running = False
+        self._last_run = None  # params and controls of the most recent run, for export_pdf
         self.window = None  # set by main.py after create_window
 
     def _coerce_one(self, key, val):
@@ -110,6 +112,14 @@ class Api:
         if self._running:
             return {'error': 'already running'}
         self._running = True
+        # Snapshot now: the form may be edited after the run, but the report must
+        # record the inputs that produced the results on screen.
+        self._last_run = {
+            'time': datetime.datetime.now(),
+            'params_csv': self.get_params_csv(),
+            'mode': int(mode), 'testmode': int(testmode),
+            'tout': float(tout), 'glim': float(glim),
+        }
         t = threading.Thread(
             target=self._run_worker,
             args=(int(mode), int(testmode), float(tout), float(glim), str(efname)),
@@ -171,3 +181,90 @@ class Api:
         except queue.Empty:
             pass
         return '\n'.join(lines)
+
+    def get_last_run(self):
+        """Inputs of the most recent run, for the PDF report header and parameter appendix."""
+        if not self._last_run:
+            return None
+        r = dict(self._last_run)
+        r['time'] = r['time'].strftime('%Y-%m-%d %H:%M:%S')
+        return r
+
+    def export_pdf(self, filepath):
+        """Print the page (styled by @media print) to a PDF file. Returns the path written.
+
+        Blank path -> data/_report-<run time>.pdf, so each run gets its own file.
+        """
+        if not self._last_run:
+            return {'ok': False, 'error': 'Run a projection first'}
+        path = self._resolve_path(filepath)
+        if not path:
+            stamp = self._last_run['time'].strftime('%Y%m%d-%H%M%S')
+            path = os.path.join(_APP_DIR, 'data', f'_report-{stamp}.pdf')
+        if not path.lower().endswith('.pdf'):
+            path += '.pdf'
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        try:
+            _print_to_pdf(self.window, path)
+        except Exception as e:
+            return {'ok': False, 'error': str(e)}
+        return {'ok': True, 'path': path}
+
+
+def _print_to_pdf(window, path, timeout=60):
+    """Save the window's WKWebView to `path` via a native print operation (macOS only).
+
+    Uses the print system rather than WKWebView.createPDF so the output is paginated
+    and honors @media print; text and Plotly's SVG charts stay vector and selectable.
+    Must be called off the main thread: it schedules the print there and waits.
+    """
+    try:
+        import AppKit
+        import Foundation
+        import objc
+        from PyObjCTools import AppHelper
+        from webview.platforms.cocoa import BrowserView
+    except ImportError:
+        raise RuntimeError('PDF export is only implemented for macOS; use the browser print dialog')
+
+    webview = BrowserView.instances[window.uid].webview
+    done = threading.Event()
+    result = {}
+
+    class _Delegate(Foundation.NSObject):
+        @objc.typedSelector(b'v@:@Z^v')
+        def printOperationDidRun_success_contextInfo_(self, op, success, ctx):
+            result['success'] = bool(success)
+            done.set()
+
+    delegate = _Delegate.alloc().init()
+
+    def run():
+        try:
+            info = AppKit.NSPrintInfo.sharedPrintInfo().copy()
+            info.setHorizontalPagination_(AppKit.NSFitPagination)
+            info.setVerticallyCentered_(False)
+            for side in ('Top', 'Bottom', 'Left', 'Right'):
+                getattr(info, f'set{side}Margin_')(36)  # 0.5 in
+            d = info.dictionary()
+            d[AppKit.NSPrintJobDisposition] = AppKit.NSPrintSaveJob
+            d[AppKit.NSPrintJobSavingURL] = Foundation.NSURL.fileURLWithPath_(path)
+            op = webview._printOperationWithPrintInfo_(info)
+            op.setShowsPrintPanel_(False)
+            op.setShowsProgressPanel_(False)
+            # Modal run, not runOperation(): WKWebView renders asynchronously and the
+            # synchronous call produces blank pages.
+            op.runOperationModalForWindow_delegate_didRunSelector_contextInfo_(
+                webview.window(), delegate,
+                b'printOperationDidRun:success:contextInfo:', None)
+        except Exception as e:
+            result['error'] = str(e)
+            done.set()
+
+    AppHelper.callAfter(run)
+    if not done.wait(timeout):
+        raise RuntimeError('PDF export timed out')
+    if 'error' in result:
+        raise RuntimeError(result['error'])
+    if not result.get('success') or not os.path.isfile(path):
+        raise RuntimeError('Print operation did not write the PDF')

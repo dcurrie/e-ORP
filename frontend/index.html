@@ -299,6 +299,16 @@
         <input type="number" id="glim" value="0.25" step="0.01">
       </div>
       <button type="button" id="run-btn">Run Projection</button>
+      <div class="grid-2 grid-2-with-buttons">
+        <label for="pdfname">Report PDF path</label>
+        <div class="input-with-buttons">
+          <input type="text" id="pdfname" value="" placeholder="blank = data/_report-&lt;run time&gt;.pdf">
+          <div class="button-row">
+            <button type="button" id="pdf-btn">Export PDF</button>
+            <span id="pdf-status" class="note"></span>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section id="results-section" class="panel results-section">
@@ -312,7 +322,9 @@
       </section>
       <section id="results-panel" class="panel">
         <h2>Results</h2>
+        <div id="report-header" class="print-only"></div>
         <div id="results"></div>
+        <div id="report-params" class="print-only"></div>
       </section>
     </section>
   </div>

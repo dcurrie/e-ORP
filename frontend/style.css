@@ -255,3 +255,21 @@ button {
   }
   .grid-2 label, .grid-2-with-explain label { justify-self: start; }
 }
+
+/* PDF report (Export PDF prints the page through these rules) */
+.print-only { display: none; }
+@media print {
+  .print-only { display: block; }
+  header, .form-section, .controls-section, #scip-log-panel, #results-panel > h2,
+  .modebar-container { display: none !important; }
+  #warnings-panel:has(#warnings:empty) { display: none; }
+  #main-layout { display: block; min-height: 0; }
+  .results-section { overflow: visible; padding: 0; }
+  #report-header h1 { font-size: 1.25rem; color: #228b22; margin: 0 0 0.25rem 0; }
+  #report-header p { margin: 0 0 1rem 0; color: #555; }
+  #results-panel .chart, #results-panel .table-wrapper { break-inside: avoid; }
+  #results-panel .table-wrapper { overflow: visible; }
+  #results-panel .result-section-title { break-after: avoid; }
+  #report-params { break-before: page; }
+  #report-params pre { font-size: 0.75rem; column-count: 3; }
+}

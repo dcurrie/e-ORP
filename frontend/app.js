@@ -123,6 +123,8 @@ function normalizeApi(raw) {
     load_params_from_csv: raw.load_params_from_csv || raw.loadParamsFromCsv,
     get_hist_options: raw.get_hist_options || raw.getHistOptions,
     run_projection: raw.run_projection || raw.runProjection,
+    get_last_run: raw.get_last_run || raw.getLastRun,
+    export_pdf: raw.export_pdf || raw.exportPdf,
     poll_log: raw.poll_log || raw.pollLog
   };
 }
@@ -204,6 +206,61 @@ function onPasteClick() {
   }).catch(e => appendWarning('Paste failed: ' + (e.message || String(e))));
 }
 
+function selectText(id, value) {
+  const opt = document.querySelector('#' + id + ' option[value="' + value + '"]');
+  return opt ? opt.textContent : String(value);
+}
+
+// Fill the print-only header and parameter appendix from the run snapshot, so the
+// PDF records the inputs that produced these results even if the form was edited since.
+function fillReport(run) {
+  const header = document.getElementById('report-header');
+  header.innerHTML = '';
+  const h = document.createElement('h1');
+  h.textContent = 'e-ORP — Optimal Retirement Planner';
+  const p = document.createElement('p');
+  p.textContent = 'Run ' + run.time +
+    ' · Optimizer: ' + selectText('nlpomode', run.mode) +
+    ' · Test mode: ' + selectText('testmode', run.testmode) +
+    ' · Timeout ' + run.tout + ' s · Gap limit ' + run.glim;
+  header.appendChild(h);
+  header.appendChild(p);
+
+  const params = document.getElementById('report-params');
+  params.innerHTML = '';
+  const t = document.createElement('div');
+  t.className = 'result-section-title';
+  t.textContent = 'Parameters (CSV — paste into the Clipboard box and Load from CSV to reproduce)';
+  const pre = document.createElement('pre');
+  pre.textContent = run.params_csv;
+  params.appendChild(t);
+  params.appendChild(pre);
+}
+
+function onPdfClick() {
+  const api = getApi();
+  const status = document.getElementById('pdf-status');
+  if (!api) { appendWarning('Export PDF: App not ready.'); return; }
+  if (!document.getElementById('results').hasChildNodes()) {
+    status.textContent = 'Nothing to export — run a projection first.';
+    return;
+  }
+  const btn = document.getElementById('pdf-btn');
+  btn.disabled = true;
+  status.textContent = 'Exporting…';
+  api.get_last_run().then(run => {
+    if (!run) throw new Error('Run a projection first');
+    fillReport(run);
+    return api.export_pdf(document.getElementById('pdfname').value);
+  }).then(result => {
+    if (result && result.error) throw new Error(result.error);
+    status.textContent = 'Saved ' + result.path;
+  }).catch(e => {
+    status.textContent = '';
+    appendWarning('Export PDF failed: ' + (e.message || String(e)));
+  }).finally(() => { btn.disabled = false; });
+}
+
 function attachParamButtons() {
   const saveBtn = document.getElementById('save-btn');
   const loadBtn = document.getElementById('load-btn');
@@ -215,6 +272,8 @@ function attachParamButtons() {
   if (copyBtn) copyBtn.addEventListener('click', onCopyClick);
   if (pasteBtn) pasteBtn.addEventListener('click', onPasteClick);
   if (runBtn) runBtn.addEventListener('click', onRun);
+  const pdfBtn = document.getElementById('pdf-btn');
+  if (pdfBtn) pdfBtn.addEventListener('click', onPdfClick);
 }
 
 if (document.readyState === 'loading') {
